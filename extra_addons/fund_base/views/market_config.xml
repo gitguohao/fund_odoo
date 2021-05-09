@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <record id="market_config_tree" model="ir.ui.view">
+            <field name="name">market.config</field>
+            <field name="model">market.config</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="交易日管理" editable="bottom">
+                    <field name='code' />
+                    <field name='name' />
+                    <field name='beg_date' />
+                    <field name='end_date' />
+                    <field name='remark' />
+                </tree>
+            </field>
+        </record>
+    </data>
+</odoo>

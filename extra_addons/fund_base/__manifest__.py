@@ -1,0 +1,25 @@
+# -*- coding: utf-8 -*-
+{
+    'name': "基金基础功能",
+    'summary': """""",
+    'author': "Debasish Dash",
+    'website': "http://www.debweb.com",
+    'category': 'CRM',
+    'version': '12.0.1',
+    'depends': ['base'],
+    'data': [
+        'views/security.xml',
+        'views/no_risk_data.xml',
+        'views/market_situation.xml',
+        'views/fund_base_data.xml',
+        'views/indicators_config.xml',
+        'views/transaction_date_config.xml',
+        'views/market_config.xml',
+        'views/menus.xml',
+        'security/ir.model.access.csv',
+    ],
+    # 'license': 'LGPL-3',
+    'installable':True,
+    'application': True,
+    'auto_install':False,
+}

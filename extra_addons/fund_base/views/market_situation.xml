@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <record id="market_situation_tree" model="ir.ui.view">
+            <field name="name">market.situation</field>
+            <field name="model">market.situation</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="大盘行情数据">
+                    <field name='code' />
+                    <field name='name' />
+                    <field name='opening_quotation' />
+                    <field name='close_quoation' />
+                    <field name='last_transaction_date' />
+                    <field name='transaction_date_config_id' />
+                    <field name='remark' />
+                </tree>
+            </field>
+        </record>
+        <record id="market_situation_form" model="ir.ui.view">
+            <field name="name">market.situation</field>
+            <field name="model">market.situation</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+				<form string="大盘行情数据">
+                    <sheet string="大盘行情数据">
+                        <group>
+                            <group>
+                                <field name="code"/>
+                                <field name="transaction_date_config_id"/>
+                            </group>
+                            <group>
+                                <field name="name"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="日行情" >
+                                <field name="market_day_situation_ids">
+                                    <tree editable="bottom">
+                                        <field name="dates" />
+                                        <field name="opening_quotation" />
+                                        <field name="close_quoation" />
+                                        <field name="interest_rate" />
+                                    </tree>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+				</form>
+            </field>
+        </record>
+
+    </data>
+</odoo>

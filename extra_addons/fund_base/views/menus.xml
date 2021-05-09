@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <record model="ir.actions.act_window" id="transaction_date_config_action">
+            <field name="name">交易日管理</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">transaction.date.config</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="transaction_date_config_tree"/>
+        </record>
+
+        <record model="ir.actions.act_window" id="market_config_action">
+            <field name="name">时间区间设置</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">market.config</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="market_config_tree"/>
+        </record>
+
+        <record model="ir.actions.act_window" id="indicators_config_action">
+            <field name="name">指标管理</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">indicators.config</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="indicators_config_tree"/>
+        </record>
+
+        <record model="ir.actions.act_window" id="fund_base_data_action">
+            <field name="name">基金基础数据</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">fund.base.data</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="fund_base_data_tree"/>
+        </record>
+
+        <record model="ir.actions.act_window" id="market_situation_action">
+            <field name="name">大盘行情数据</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">market.situation</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="market_situation_tree"/>
+        </record>
+
+        <record model="ir.actions.act_window" id="no_risk_data_action">
+            <field name="name">无风险数据</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">no.risk.data</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="no_risk_data_tree"/>
+        </record>
+
+        <menuitem id="menu_base" name="基础数据" sequence="1" groups="hr.group_hr_user,fund_base.fund_manager_group"/>
+        <menuitem id="menu_base_transaction_date_config" name="交易日管理" sequence="10" parent="menu_base" action="transaction_date_config_action" groups="hr.group_hr_user,fund_base.fund_manager_group"/>
+        <menuitem id="menu_base_market_config" name="时间区间设置" sequence="20" parent="menu_base" action="market_config_action" groups="hr.group_hr_user,fund_base.fund_manager_group"/>
+        <menuitem id="menu_base_indicators_config" name="指标管理" sequence="30" parent="menu_base" action="indicators_config_action" groups="hr.group_hr_user,fund_base.fund_manager_group"/>
+        <menuitem id="menu_base_fund_base_data" name="基金基础数据" sequence="40" parent="menu_base" action="fund_base_data_action" groups="hr.group_hr_user,fund_base.fund_manager_group"/>
+        <menuitem id="menu_market_situation" name="大盘行情数据" sequence="50" parent="menu_base" action="market_situation_action" groups="hr.group_hr_user,fund_base.fund_manager_group"/>
+        <menuitem id="menu_no_risk_data" name="无风险数据" sequence="60" parent="menu_base" action="no_risk_data_action" groups="hr.group_hr_user,fund_base.fund_manager_group"/>
+
+    </data>
+</odoo>

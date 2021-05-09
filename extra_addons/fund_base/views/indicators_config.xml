@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <record id="indicators_config_tree" model="ir.ui.view">
+            <field name="name">indicators.config</field>
+            <field name="model">indicators.config</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="交易日管理" editable="bottom">
+                    <field name='code' />
+                    <field name='name' />
+                    <field name='english' />
+                    <field name='formula' />
+                    <field name='remark' />
+                </tree>
+            </field>
+        </record>
+    </data>
+</odoo>
