@@ -1,12 +1,12 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_transaction_date_config,transaction.date.config,model_transaction_date_config,fund_base.fund_manager_group,1,1,1,1
-access_transaction_date,transaction.date,model_transaction_date,fund_base.fund_manager_group,1,1,1,1
-access_market_config,market.config,model_market_config,fund_base.fund_manager_group,1,1,1,1
-access_indicators_config,indicators.config,model_indicators_config,fund_base.fund_manager_group,1,1,1,1
-access_fund_base_data,fund.base.data,model_fund_base_data,fund_base.fund_manager_group,1,1,1,1
-access_fund_base_day_net,fund.base.day.net,model_fund_base_day_net,fund_base.fund_manager_group,1,1,1,1
-access_market_situation,market.situation,model_market_situation,fund_base.fund_manager_group,1,1,1,1
-access_market_day_situation,market.situation,model_market_day_situation,fund_base.fund_manager_group,1,1,1,1
-access_no_risk_data,no.risk.data,model_no_risk_data,fund_base.fund_manager_group,1,1,1,1
-access_transaction_date_year,transaction.date.year,model_transaction_date_year,fund_base.fund_manager_group,1,1,1,1
+access_transaction_date_config,transaction.date.config,model_transaction_date_config,fund_base.fund_manager_group,1,1,1,0
+access_transaction_date,transaction.date,model_transaction_date,fund_base.fund_manager_group,1,1,1,0
+access_market_config,market.config,model_market_config,fund_base.fund_manager_group,1,1,1,0
+access_indicators_config,indicators.config,model_indicators_config,fund_base.fund_manager_group,1,1,1,0
+access_fund_base_data,fund.base.data,model_fund_base_data,fund_base.fund_manager_group,1,1,1,0
+access_fund_base_day_net,fund.base.day.net,model_fund_base_day_net,fund_base.fund_manager_group,1,1,1,0
+access_market_situation,market.situation,model_market_situation,fund_base.fund_manager_group,1,1,1,0
+access_market_day_situation,market.situation,model_market_day_situation,fund_base.fund_manager_group,1,1,1,0
+access_no_risk_data,no.risk.data,model_no_risk_data,fund_base.fund_manager_group,1,1,1,0
+access_transaction_date_year,transaction.date.year,model_transaction_date_year,fund_base.fund_manager_group,1,1,1,0
 
