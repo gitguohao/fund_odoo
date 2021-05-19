@@ -10,7 +10,6 @@
     'data': [
         'security/ir.model.access.csv',
         'views/security.xml',
-        'views/menus.xml',
         'views/fund_base_wizard.xml',
         'views/no_risk_data.xml',
         'views/market_situation.xml',
@@ -18,7 +17,8 @@
         'views/indicators_config.xml',
         'views/transaction_date_config.xml',
         'views/market_config.xml',
-
+        'views/compute_fund_setting.xml',
+        'views/menus.xml',
     ],
     # 'license': 'LGPL-3',
     'installable':True,

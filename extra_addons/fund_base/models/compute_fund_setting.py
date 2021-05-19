@@ -1,5 +1,7 @@
 # coding: utf-8
 from odoo import models, fields
+from datetime import date
+
 
 class computeFundSetting(models.Model):
     _name = "compute.fund.setting"
@@ -9,7 +11,7 @@ class computeFundSetting(models.Model):
     time_types = fields.Selection([('day', '天'), ('week', '周'), ('month', '月')], string='时间维度')
     transaction_date_config_id = fields.Many2one('transaction.date.config', string='交易日')
     beg_date = fields.Date(string='开始时间')
-    end_date = fields.Date(string='结束时间')
+    end_date = fields.Date(string='结束时间', default=date.today())
     last_compute_indicators_datetime = fields.Datetime(string='最新指标计算时间')
     no_risk_data_id = fields.Many2one('no.risk.data', string='选择标的')
     system_no_risk_data_rate = fields.Float(string='系统计算RF结果')

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <record id="compute_fund_setting_tree" model="ir.ui.view">
+            <field name="name">compute.fund.setting</field>
+            <field name="model">compute.fund.setting</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="计算模型设置">
+                    <field name='code' />
+                    <field name='name' />
+                    <field name='time_types' />
+                    <field name='transaction_date_config_id' />
+                    <field name='beg_date' />
+                    <field name='end_date' />
+                    <field name='last_compute_indicators_datetime' />
+                </tree>
+            </field>
+        </record>
+
+        <record id="compute_fund_setting_form" model="ir.ui.view">
+            <field name="name">compute.fund.setting</field>
+            <field name="model">compute.fund.setting</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+				<form string="计算模型设置">
+                    <sheet string="计算模型设置">
+                        <H1>创建</H1>
+                        <group>
+                            <group>
+                                <field name="code"/>
+                                <field name="time_types"/>
+                                <field name="beg_date"/>
+                            </group>
+                            <group>
+                                <field name="name"/>
+                                <field name="transaction_date_config_id"/>
+                                <field name="end_date"/>
+                            </group>
+                        </group>
+                    </sheet>
+
+                    <sheet string="设置无风险收益率计算-RF">
+                        <H1>设置无风险收益率计算-RF</H1>
+                        <group>
+                            <group>
+                                <field name="no_risk_data_id"/>
+                                <field name="system_no_risk_data_rate"/>
+                            </group>
+                            <group>
+                                <field name="manual_no_risk_data_rate"/>
+                                <field name="risk_types"/>
+                            </group>
+                        </group>
+                    </sheet>
+
+                    <sheet string="设置基准综合收益率-RM">
+                        <H1>设置基准综合收益率-RM</H1>
+                        <notebook>
+                            <page string="设置基准综合收益率-RM">
+                                <field name="rm_setting_ids">
+                                    <tree string="设置基准综合收益率-RM" editable="bottom">
+                                        <field name="market_situation_id"/>
+                                        <field name="ratio"/>
+                                    </tree>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+
+                    <sheet string="时间区间">
+                        <H1>时间区间</H1>
+                        <notebook>
+                            <page string="时间区间">
+                                <field name="market_config_ids"/>
+                            </page>
+                        </notebook>
+                    </sheet>
+
+                    <sheet string="筛选后的数据">
+                        <H1>筛选后的数据</H1>
+                        <notebook>
+                            <page string="筛选后的数据">
+                                <field name="filter_fund_base_data_ids">
+                                    <tree>
+                                        <field name="fund_base_data_id"/>
+                                        <field name="code"/>
+                                    </tree>
+                                    <form>
+                                        <sheet>
+                                            <group>
+                                                <group>
+                                                    <field name="fund_base_data_id" />
+                                                    <field name="code" />
+                                                </group>
+                                                <group>
+                                                </group>
+                                                <field name="filter_fund_base_day_net_ids" >
+                                                    <tree editable="bottom">
+                                                        <field name="dates" />
+                                                        <field name="unit_net" />
+                                                    </tree>
+                                                </field>
+                                            </group>
+                                        </sheet>
+                                    </form>
+
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+				</form>
+            </field>
+        </record>
+
+    </data>
+</odoo>
