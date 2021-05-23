@@ -20,8 +20,8 @@ class NoRiskData(models.Model):
         transaction_dates = self.transaction_date_config_id.get_transaction_dates(b_date, e_date)
         interest_rates = self.env['no.risk.data.line'].search_read([
             ('transaction_date', 'in', transaction_dates),
-        ], ['interest_rate'])
-        interest_rates = [i['interest_rate'] for i in interest_rates]
+        ], ['interest_rate', 'transaction_date'])
+        # interest_rates = [i['interest_rate'] for i in interest_rates]
         return interest_rates
 
 

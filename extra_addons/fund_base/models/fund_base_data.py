@@ -36,15 +36,19 @@ class FundBaseData(models.Model):
         return vals
 
     def write(self, vals):
-        fundBaseData = super(FundBaseData, self).write(vals)
-        return fundBaseData
-        # if 'fund_base_day_net_ids' in vals:
-        #     fund_base_day_net_vals = self.get_fund_base_day_net_id()
-        #     rid = fund_base_day_net_vals.get('fund_base_day_net_id', 0)
-        #
-        #     if self.fund_base_day_net_id != rid:
-        #         vals.update(fund_base_day_net_vals)
-        # return super(FundBaseData, self).write(vals)
+        if 'fund_base_day_net_ids' in vals:
+            # 写入日净值
+            super(FundBaseData, self).write({'fund_base_day_net_ids': vals['fund_base_day_net_ids']})
+            del vals['fund_base_day_net_ids']
+
+            # 获取最后日净值记录
+            fund_base_day_net_vals = self.get_fund_base_day_net_id()
+            rid = fund_base_day_net_vals.get('fund_base_day_net_id', 0)
+
+            if not self.fund_base_day_net_id or self.fund_base_day_net_id.id != rid:
+                vals.update(fund_base_day_net_vals)
+        return super(FundBaseData, self).write(vals)
+
 
 
 class FundBaseDayNet(models.Model):
