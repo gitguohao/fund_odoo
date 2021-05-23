@@ -37,12 +37,14 @@ class FundBaseData(models.Model):
 
     def write(self, vals):
         fundBaseData = super(FundBaseData, self).write(vals)
-        if 'fund_base_day_net_ids' in vals:
-            fund_base_day_net_vals = self.get_fund_base_day_net_id()
-            rid = fund_base_day_net_vals.get('fund_base_day_net_id', 0)
-            if self.fund_base_day_net_id != rid:
-                vals.update(fund_base_day_net_vals)
-        return super(FundBaseData, self).write(vals)
+        return fundBaseData
+        # if 'fund_base_day_net_ids' in vals:
+        #     fund_base_day_net_vals = self.get_fund_base_day_net_id()
+        #     rid = fund_base_day_net_vals.get('fund_base_day_net_id', 0)
+        #
+        #     if self.fund_base_day_net_id != rid:
+        #         vals.update(fund_base_day_net_vals)
+        # return super(FundBaseData, self).write(vals)
 
 
 class FundBaseDayNet(models.Model):

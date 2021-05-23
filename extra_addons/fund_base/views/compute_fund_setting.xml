@@ -45,7 +45,7 @@
                         <group>
                             <group>
                                 <field name="no_risk_data_id"/>
-                                <field name="system_no_risk_data_rate"/>
+                                <field name="system_no_risk_data_rate" readonly="1"/>
                             </group>
                             <group>
                                 <field name="manual_no_risk_data_rate"/>

@@ -1,9 +1,11 @@
 # coding: utf-8
-from odoo import models, fields
+import math
+from odoo import models, fields, api
 from datetime import date
+from extra_addons.tools import fn_timer
 
 
-class computeFundSetting(models.Model):
+class ComputeFundSetting(models.Model):
     _name = "compute.fund.setting"
     _description = u'计算模型设置'
     code = fields.Char(string='模型编码')
@@ -14,7 +16,7 @@ class computeFundSetting(models.Model):
     end_date = fields.Date(string='结束时间', default=date.today())
     last_compute_indicators_datetime = fields.Datetime(string='最新指标计算时间')
     no_risk_data_id = fields.Many2one('no.risk.data', string='选择标的')
-    system_no_risk_data_rate = fields.Float(string='系统计算RF结果')
+    system_no_risk_data_rate = fields.Float(string='系统计算RF结果', digits=(16, 4))
     manual_no_risk_data_rate = fields.Float(string='手动计算RF结果')
     risk_types = fields.Selection([('system', '系统'), ('manual', '手动')], default='system', string='选择系统/手动的RF结果')
     rm_setting_ids = fields.One2many('rm.setting', 'compute_fund_setting_id', string='选择标的')
@@ -22,6 +24,21 @@ class computeFundSetting(models.Model):
     fund_base_year = fields.Boolean(string='近一年')
     market_config_ids = fields.Many2many('market.config', string='选择标的')
     filter_fund_base_data_ids = fields.One2many('filter.fund.base.data', 'compute_fund_setting_id', string='筛选后数据')
+
+    # 系统计算RF结果/系统计算无风险收益率计算
+    # @fn_timer
+    @api.onchange('no_risk_data_id', 'beg_date', 'end_date')
+    def onchange_interest_rates(self):
+        if self.no_risk_data_id and self.beg_date and self.end_date:
+            interest_rates = self.no_risk_data_id.get_no_risk_data_interest_rate(self.beg_date, self.end_date)
+            interest_rates_len = len(interest_rates)
+            rf_interest_rates = [interest_rate * (1/interest_rates_len) for interest_rate in interest_rates]
+            n = 4
+            rates_sum = sum(rf_interest_rates)
+            system_no_risk_data_rate = math.floor(rates_sum * 10 ** n) / (10 ** n)
+        else:
+            system_no_risk_data_rate = 0
+        self.system_no_risk_data_rate = system_no_risk_data_rate
 
 
 class RmSetting(models.Model):

@@ -1,5 +1,21 @@
 # -*- coding: utf-8 -*-
 import arrow
+import logging
+import datetime
+from functools import wraps
+
+_logger = logging.getLogger(__name__)
+
+
+def fn_timer(function):
+    @wraps(function)
+    def function_timer(*args, **kwargs):
+        t0 = datetime.datetime.now()
+        result = function(*args, **kwargs)
+        t1 = datetime.datetime.now()
+        _logger.info("%s方法运行时间: %s 秒" % (function.func_name, str(t1 - t0)))
+        return result
+    return function_timer
 
 
 class Tools(object):

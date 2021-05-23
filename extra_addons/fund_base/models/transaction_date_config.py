@@ -2,7 +2,7 @@
 from odoo import models, fields, api, _
 from extra_addons.tools import Tools
 from odoo.exceptions import UserError
-
+from extra_addons.tools import fn_timer
 
 
 class TransactionDateConfig(models.Model):
@@ -12,6 +12,18 @@ class TransactionDateConfig(models.Model):
     code = fields.Char('编码')
     remark = fields.Char('备注')
     transaction_date_year_ids = fields.One2many('transaction.date.year', 'transaction_date_config_id',string='交易日配置')
+
+    # 获取交易日
+    # @fn_timer
+    def get_transaction_dates(self, b_date, e_date, **kwargs):
+        transaction_dates = self.env['transaction.date'].search_read([
+            ('dates', '>=', b_date),
+            ('dates', '<=', e_date),
+            ('is_transaction_selection', '=', 'y')
+        ], ["dates"])
+        transaction_dates = [transaction['dates'] for transaction in transaction_dates]
+        return transaction_dates
+
 
 class TransactionDateYear(models.Model):
     _name = 'transaction.date.year'
@@ -44,6 +56,7 @@ class TransactionDateYear(models.Model):
     def write(self, vals):
         if 'years' in vals:
             raise UserError(_('交易日年份,年份不可以修改'))
+        return super(TransactionDateYear, self).write(vals)
 
 
 class TransactionDate(models.Model):

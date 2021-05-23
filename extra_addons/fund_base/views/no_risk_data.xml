@@ -37,7 +37,7 @@
                         <notebook>
                             <page string="日收益率" >
                                 <field name="no_risk_data_lines">
-                                    <tree editable="bottom">
+                                    <tree editable="bottom" default_order="transaction_date desc">
                                         <field name="transaction_date" />
                                         <field name="interest_rate" />
                                     </tree>

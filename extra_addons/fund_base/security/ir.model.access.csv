@@ -8,6 +8,7 @@ access_fund_base_day_net,fund.base.day.net,model_fund_base_day_net,fund_base.fun
 access_market_situation,market.situation,model_market_situation,fund_base.fund_manager_group,1,1,1,0
 access_market_day_situation,market.situation,model_market_day_situation,fund_base.fund_manager_group,1,1,1,0
 access_no_risk_data,no.risk.data,model_no_risk_data,fund_base.fund_manager_group,1,1,1,0
+access_no_risk_data_line,no.risk.data.line,model_no_risk_data_line,fund_base.fund_manager_group,1,1,1,0
 access_transaction_date_year,transaction.date.year,model_transaction_date_year,fund_base.fund_manager_group,1,1,1,0
 access_compute_fund_setting,compute.fund.setting,model_compute_fund_setting,fund_base.fund_manager_group,1,1,1,0
 access_rm_setting,rm.setting,model_rm_setting,fund_base.fund_manager_group,1,1,1,0
