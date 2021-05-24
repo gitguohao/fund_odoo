@@ -1,4 +1,5 @@
 # coding: utf-8
+import datetime as dt
 from odoo import models, fields
 from extra_addons.tools import fn_timer
 
@@ -21,7 +22,6 @@ class NoRiskData(models.Model):
         interest_rates = self.env['no.risk.data.line'].search_read([
             ('transaction_date', 'in', transaction_dates),
         ], ['interest_rate', 'transaction_date'])
-        # interest_rates = [i['interest_rate'] for i in interest_rates]
         return interest_rates
 
 
