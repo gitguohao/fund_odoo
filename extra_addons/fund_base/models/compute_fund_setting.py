@@ -53,8 +53,10 @@ class ComputeFundSetting(models.Model):
     def onchange_interest_rates(self):
         if self.no_risk_data_id and self.beg_date and self.end_date and self.time_types:
             interest_rates = self.no_risk_data_id.get_no_risk_data_interest_rate(self.beg_date, self.end_date)
-            rf_weeks = self.rf_weeks(interest_rates, self.time_types)
-            rates_sum = rf_weeks['formula_value'].sum()
+            rates_sum = 0
+            if interest_rates:
+                rf_weeks = self.rf_weeks(interest_rates, self.time_types)
+                rates_sum = rf_weeks['formula_value'].sum()
             system_no_risk_data_rate = math.floor(rates_sum * 10 ** n) / (10 ** n)
         else:
             system_no_risk_data_rate = 0
