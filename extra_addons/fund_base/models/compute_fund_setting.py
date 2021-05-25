@@ -3,7 +3,8 @@ import math
 import pandas as pd
 from odoo import models, fields, api
 from datetime import date
-from extra_addons.tools import fn_timer
+
+n = 4
 
 
 class ComputeFundSetting(models.Model):
@@ -26,32 +27,35 @@ class ComputeFundSetting(models.Model):
     market_config_ids = fields.Many2many('market.config', string='选择标的')
     filter_fund_base_data_ids = fields.One2many('filter.fund.base.data', 'compute_fund_setting_id', string='筛选后数据')
 
-    # 无风险数据(周)
-    def rf_weeks(self, interest_rates):
+    def rf_formula(self, x, week_len):
+        a = (1 / week_len) * x['interest_rate']
+        math.floor(a * 10 ** n) / (10 ** n)
+        return a
+
+    # 无风险数据 time_types:频率
+    def rf_weeks(self, interest_rates, time_types):
         df = pd.DataFrame(interest_rates, columns=['interest_rate', 'transaction_date'])
-        week_groups = df.groupby([df['transaction_date'].dt.isocalendar().week]).max()
+        df['transaction_date'] = pd.to_datetime(df['transaction_date'])
+        china_calendar = df['transaction_date'].dt
+        if time_types == 'week':
+            china_calendar = getattr(china_calendar, 'isocalendar')()
+        times = getattr(china_calendar, time_types)
+        week_groups = df.groupby(times).max()
+        # 多少周
+        week_len = week_groups.index.size
+        # group后添加行
+        week_groups['formula_value'] = week_groups.apply(self.rf_formula, week_len=week_len, axis=1)
         return week_groups
 
     # 系统计算RF结果/系统计算无风险收益率计算
     # @fn_timer
-    @api.onchange('no_risk_data_id', 'beg_date', 'end_date')
+    @api.onchange('no_risk_data_id', 'beg_date', 'end_date', 'time_types')
     def onchange_interest_rates(self):
         if self.no_risk_data_id and self.beg_date and self.end_date and self.time_types:
             interest_rates = self.no_risk_data_id.get_no_risk_data_interest_rate(self.beg_date, self.end_date)
-            if self.time_types == 'day':
-                interest_rates_len = len(interest_rates)
-                rf_interest_rates = [interest_rate * (1/interest_rates_len) for interest_rate in interest_rates]
-                n = 4
-                rates_sum = sum(rf_interest_rates)
-                system_no_risk_data_rate = math.floor(rates_sum * 10 ** n) / (10 ** n)
-            elif self.time_types == 'week':
-                rf_weeks = self.rf_weeks(interest_rates)
-                # 多少周
-                rf_weeks.index.size
-                system_no_risk_data_rate = 0
-
-            else:
-                system_no_risk_data_rate = 0
+            rf_weeks = self.rf_weeks(interest_rates, self.time_types)
+            rates_sum = rf_weeks['formula_value'].sum()
+            system_no_risk_data_rate = math.floor(rates_sum * 10 ** n) / (10 ** n)
         else:
             system_no_risk_data_rate = 0
         self.system_no_risk_data_rate = system_no_risk_data_rate
