@@ -64,6 +64,7 @@
                                         <field name="ratio"/>
                                     </tree>
                                 </field>
+                                <field name="rm_rate"/>
                             </page>
                         </notebook>
                     </sheet>

@@ -19,48 +19,80 @@ class ComputeFundSetting(models.Model):
     last_compute_indicators_datetime = fields.Datetime(string='最新指标计算时间')
     no_risk_data_id = fields.Many2one('no.risk.data', string='选择标的')
     system_no_risk_data_rate = fields.Float(string='系统计算RF结果', digits=(16, 4))
-    manual_no_risk_data_rate = fields.Float(string='手动计算RF结果')
+    manual_no_risk_data_rate = fields.Float(string='手动计算RF结果', digits=(16, 4))
     risk_types = fields.Selection([('system', '系统'), ('manual', '手动')], default='system', string='选择系统/手动的RF结果')
     rm_setting_ids = fields.One2many('rm.setting', 'compute_fund_setting_id', string='选择标的')
+    rm_rate = fields.Float(string='基准综合收益率', digits=(16, 4))
     fund_base_all = fields.Boolean(string='总览')
     fund_base_year = fields.Boolean(string='近一年')
     market_config_ids = fields.Many2many('market.config', string='选择标的')
     filter_fund_base_data_ids = fields.One2many('filter.fund.base.data', 'compute_fund_setting_id', string='筛选后数据')
 
-    def rf_formula(self, x, week_len):
-        a = (1 / week_len) * x['interest_rate']
+    def rf_formula(self, x, field,size):
+        a = (1 / size) * x[field]
+        math.floor(a * 10 ** n) / (10 ** n)
+        return a
+
+    def rm_formula(self, x, size):
+        a = (1 / size) * x['interest_rate']
         math.floor(a * 10 ** n) / (10 ** n)
         return a
 
     # 无风险数据 time_types:频率
-    def rf_weeks(self, interest_rates, time_types):
+    def get_rf(self, interest_rates, time_types):
         df = pd.DataFrame(interest_rates, columns=['interest_rate', 'transaction_date'])
         df['transaction_date'] = pd.to_datetime(df['transaction_date'])
         china_calendar = df['transaction_date'].dt
         if time_types == 'week':
             china_calendar = getattr(china_calendar, 'isocalendar')()
+        rf_data = self.data_group_pds(df, china_calendar, time_types, 'transaction_date')
+        return rf_data
+
+    # 基准综合收益率 time_types:频率
+    def get_rm(self, interest_rates, time_types):
+        df = pd.DataFrame(interest_rates, columns=['interest_rate', 'transaction_date'])
+        df['transaction_date'] = pd.to_datetime(df['transaction_date'])
+        china_calendar = df['transaction_date'].dt
+        if time_types == 'week':
+            china_calendar = getattr(china_calendar, 'isocalendar')()
+        rm_data = self.data_group_pds(df, china_calendar, time_types, 'transaction_date')
+        return rm_data
+
+    def data_group_pds(self, df, china_calendar, time_types, field):
         times = getattr(china_calendar, time_types)
-        week_groups = df.groupby(times).max()
-        # 多少周
-        week_len = week_groups.index.size
+        data_group = df.groupby(times).max()
+        size = data_group.index.size
         # group后添加行
-        week_groups['formula_value'] = week_groups.apply(self.rf_formula, week_len=week_len, axis=1)
-        return week_groups
+        data_group['formula_value'] = data_group.apply(self.rf_formula, field=field, size=size, axis=1)
+        return data_group
 
     # 系统计算RF结果/系统计算无风险收益率计算
-    # @fn_timer
     @api.onchange('no_risk_data_id', 'beg_date', 'end_date', 'time_types')
     def onchange_interest_rates(self):
         if self.no_risk_data_id and self.beg_date and self.end_date and self.time_types:
             interest_rates = self.no_risk_data_id.get_no_risk_data_interest_rate(self.beg_date, self.end_date)
             rates_sum = 0
             if interest_rates:
-                rf_weeks = self.rf_weeks(interest_rates, self.time_types)
-                rates_sum = rf_weeks['formula_value'].sum()
+                rfs = self.get_rf(interest_rates, self.time_types)
+                rates_sum = rfs['formula_value'].sum()
             system_no_risk_data_rate = math.floor(rates_sum * 10 ** n) / (10 ** n)
         else:
             system_no_risk_data_rate = 0
         self.system_no_risk_data_rate = system_no_risk_data_rate
+
+    @api.onchange('rm_setting_ids', 'beg_date', 'end_date', 'time_types')
+    def onchange_rm_rate(self):
+        rm_rate = 0
+        if self.rm_setting_ids and self.beg_date and self.end_date and self.time_types:
+            for rm_setting in self.rm_setting_ids:
+                market_situation_vals = rm_setting.market_situation_id.get_market_situation(self.beg_date, self.end_date)
+                rates_sum = 0
+                if market_situation_vals:
+                    rms = self.get_rm(market_situation_vals, self.time_types)
+                    rates_sum = rms['formula_value'].sum()
+                rm_rate = math.floor(rates_sum * 10 ** n) / (10 ** n)
+        self.rm_rate = rm_rate
+
 
 
 class RmSetting(models.Model):
