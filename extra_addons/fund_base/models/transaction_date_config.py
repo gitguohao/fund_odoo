@@ -17,6 +17,7 @@ class TransactionDateConfig(models.Model):
     # @fn_timer
     def get_transaction_dates(self, b_date, e_date, **kwargs):
         transaction_dates = self.env['transaction.date'].search_read([
+            ('transaction_date_config_id', '=', self.id),
             ('dates', '>=', b_date),
             ('dates', '<=', e_date),
             ('is_transaction_selection', '=', 'y')

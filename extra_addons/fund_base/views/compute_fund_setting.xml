@@ -37,6 +37,7 @@
                                 <field name="transaction_date_config_id"/>
                                 <field name="end_date"/>
                             </group>
+                            <button string="计算" name="filter" type="object" class="btn-primary"/>
                         </group>
                     </sheet>
 
@@ -64,7 +65,7 @@
                                         <field name="ratio"/>
                                     </tree>
                                 </field>
-                                <field name="rm_rate"/>
+                                <field name="rm_rate" readonly="1"/>
                             </page>
                         </notebook>
                     </sheet>

@@ -22,7 +22,6 @@ class MarketSituation(models.Model):
         return datas
 
 
-
 class MarketDaySituation(models.Model):
     _name = 'market.day.situation'
     _description = u'日行情'

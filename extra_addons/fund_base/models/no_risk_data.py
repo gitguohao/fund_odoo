@@ -20,6 +20,7 @@ class NoRiskData(models.Model):
     def get_no_risk_data_interest_rate(self, b_date, e_date, **kwargs):
         transaction_dates = self.transaction_date_config_id.get_transaction_dates(b_date, e_date)
         interest_rates = self.env['no.risk.data.line'].search_read([
+            ('no_risk_data_id', '=', self.id),
             ('transaction_date', 'in', transaction_dates),
         ], ['interest_rate', 'transaction_date'])
         return interest_rates
