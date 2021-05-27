@@ -55,11 +55,15 @@ class ComputeFundSetting(models.Model):
     def get_rm(self, market_situation_items, time_types):
         df = pd.DataFrame(market_situation_items, columns=['close_quoation', 'dates'])
         df['dates'] = pd.to_datetime(df['dates'])
-        china_calendar = df['dates'].dt
-        if time_types == 'week':
-            china_calendar = getattr(china_calendar, 'isocalendar')()
-        times = getattr(china_calendar, time_types)
-        data_group = df.groupby(times).max()
+        if time_types != 'day':
+            china_calendar = df['dates'].dt
+            if time_types == 'week':
+                china_calendar = getattr(china_calendar, 'isocalendar')()
+            times = getattr(china_calendar, time_types)
+            data_group = df.groupby(times).max()
+            df.sort_values(by=['dates'])
+        else:
+            data_group = df
         size = data_group.index.size
         b, c = data_group.iloc[0]['close_quoation'], data_group.iloc[size - 1]['close_quoation']
         # RM单个标的收益
