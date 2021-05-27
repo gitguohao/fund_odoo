@@ -2,7 +2,7 @@
 import math
 import pandas as pd
 from odoo import models, fields, api
-from datetime import date
+from datetime import date, timedelta
 
 n = 4
 
@@ -75,7 +75,7 @@ class ComputeFundSetting(models.Model):
     def onchange_interest_rates(self):
         system_no_risk_data_rate = 0
         if self.no_risk_data_id and self.beg_date and self.end_date and self.time_types:
-            interest_rates = self.no_risk_data_id.get_no_risk_data_interest_rate(self.beg_date, self.end_date)
+            interest_rates = self.no_risk_data_id.get_no_risk_data_interest_rate(self.beg_date - timedelta(days=1), self.end_date)
             rates_sum = 0
             if interest_rates:
                 rfs = self.get_rf(interest_rates, self.time_types)
@@ -89,7 +89,7 @@ class ComputeFundSetting(models.Model):
         if self.rm_setting_ids and self.beg_date and self.end_date and self.time_types:
             rm_rate = 0
             for rm_setting in self.rm_setting_ids:
-                market_situation_items = rm_setting.market_situation_id.get_market_situation(self.beg_date, self.end_date)
+                market_situation_items = rm_setting.market_situation_id.get_market_situation(self.beg_date - timedelta(days=1), self.end_date)
                 if market_situation_items:
                     rm_rate += self.get_rm(market_situation_items, self.time_types) * (rm_setting.ratio * 0.01)
             rm_rate = math.floor(rm_rate * 10 ** n) / (10 ** n)
