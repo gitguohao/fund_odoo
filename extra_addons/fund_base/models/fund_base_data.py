@@ -50,18 +50,13 @@ class FundBaseData(models.Model):
         return super(FundBaseData, self).write(vals)
 
 
-
 class FundBaseDayNet(models.Model):
     _name = 'fund.base.day.net'
     _description = u'日净值'
-    dates = fields.Date('时间')
+    dates = fields.Date('时间', index=True)
     beg_price = fields.Float('开盘价', digits=(16, 4))
     end_price = fields.Float('收盘价', digits=(16, 4))
     unit_net = fields.Float(string='单位净值', digits=(16, 4))
     total_net = fields.Float(string='累计净值', digits=(16, 4))
     fund_base_data_id = fields.Many2one('fund.base.data', string='基金基础数据', index=True)
-
-
-
-
 

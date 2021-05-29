@@ -14,8 +14,8 @@ class MarketSituation(models.Model):
     remark = fields.Char(string='备注')
     market_day_situation_ids = fields.One2many('market.day.situation', 'market_situation_id', string='日行情')
 
-    def get_market_situation(self, b_date, e_date, **kwargs):
-        transaction_dates = self.transaction_date_config_id.get_transaction_dates(b_date, e_date)
+    def get_market_situation(self, b_date, e_date, transaction_date_config_id, **kwargs):
+        transaction_dates = transaction_date_config_id.get_transaction_dates(b_date, e_date)
         datas = self.env['market.day.situation'].search_read([
             ('dates', 'in', transaction_dates),
         ], ['dates', 'close_quoation'])

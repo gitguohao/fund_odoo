@@ -37,7 +37,6 @@
                                 <field name="transaction_date_config_id"/>
                                 <field name="end_date"/>
                             </group>
-                            <button string="计算" name="filter" type="object" class="btn-primary"/>
                         </group>
                     </sheet>
 
@@ -65,7 +64,7 @@
                                         <field name="ratio"/>
                                     </tree>
                                 </field>
-                                <field name="rm_rate" readonly="1"/>
+                                <field name="rm_rate" readonly="0"/>
                             </page>
                         </notebook>
                     </sheet>
@@ -77,6 +76,7 @@
                                 <field name="market_config_ids"/>
                             </page>
                         </notebook>
+                        <button string="计算" name="filter" type="object" class="btn-primary"/>
                     </sheet>
 
                     <sheet string="筛选后的数据">
@@ -94,16 +94,25 @@
                                                 <group>
                                                     <field name="fund_base_data_id" />
                                                     <field name="code" />
+                                                    <H1>详细指标数据</H1>
+                                                    <field name="total_std" />
+                                                    <field name="year_std" />
+                                                    <field name="market_std" />
                                                 </group>
                                                 <group>
+
                                                 </group>
-                                                <field name="filter_fund_base_day_net_ids" >
-                                                    <tree editable="bottom">
-                                                        <field name="dates" />
-                                                        <field name="unit_net" />
-                                                    </tree>
-                                                </field>
                                             </group>
+                                            <notebook>
+                                                <page string="日净值">
+                                                    <field name="filter_fund_base_day_net_ids" >
+                                                        <tree editable="bottom">
+                                                            <field name="dates" />
+                                                            <field name="unit_net" />
+                                                        </tree>
+                                                    </field>
+                                                </page>
+                                            </notebook>
                                         </sheet>
                                     </form>
 
