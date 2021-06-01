@@ -13,10 +13,11 @@ class Wizard(models.TransientModel):
     binary_data = fields.Binary(string='选择文件', attachment=True)
 
     def action_import_create_fund_base_data(self):
-        df = pd.read_excel(url_file)
-        data_groups = df.groupby('编码')
-        for i, d in data_groups:
-            print(d['编码'], d['名称'], d['时间'], ['数量'])
+        self.env['compute.fund.setting'].import_data(self.binary_data)
+
+    def action_import_create_market_situation(self):
+        self.env['market.situation'].import_data(self.binary_data)
+
     # act_create_wizard 用于创建记录
     # act_refresh_wizard 用于刷新记录
     # def act_create_wizard(self):

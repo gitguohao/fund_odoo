@@ -3,6 +3,8 @@ import math
 import pandas as pd
 from odoo import models, fields, api
 from datetime import date, timedelta
+import xlrd
+import base64
 
 n = 4
 
@@ -29,18 +31,26 @@ class ComputeFundSetting(models.Model):
     filter_fund_base_data_ids = fields.One2many('filter.fund.base.data', 'compute_fund_setting_id', string='筛选后数据')
 
     def import_data(self, data):
-        df = pd.read_excel(data)
-        size = df.shape[0]
-        for i in range(0, size):
-            code = df.iloc[i]['编码']
-            dates = df.iloc[i]['时间']
-            n = df.iloc[i]['数量']
-            self.env['fund.base.data'].search([('code', '=',)])
-        df = pd.read_excel(data)
-        data_groups = df.groupby('编码')
-        for i, d in data_groups:
-
-            print(d['编码'], d['名称'], d['时间'], ['数量'])
+        excel = xlrd.open_workbook(file_contents=base64.decodestring(data))
+        sh = excel.sheet_by_index(0)
+        cell_values = sh._cell_values
+        for rx in range(sh.nrows):
+            if rx == 0: continue
+            code = cell_values[rx][0]
+            name = cell_values[rx][1]
+            dates = cell_values[rx][2]
+            total_net = cell_values[rx][3]
+            fund_base_data = self.env['fund.base.data'].search([('code', '=', code)])
+            if fund_base_data:
+                fid = fund_base_data.id
+                fund_base_day_net = self.env['fund.base.day.net'].search([('fund_base_data_id', '=', fid), ('dates', '=', dates)])
+                if not fund_base_day_net:
+                    vals = {
+                            'fund_base_data_id': fund_base_data.id,
+                            'dates': dates,
+                            'total_net': total_net,
+                        }
+                    self.env['fund.base.day.net'].create(vals)
 
     def filter_workflow(self, data):
         data_ratio = (data['total_net'] != 0).sum() / data.shape[0]

@@ -60,3 +60,7 @@ class FundBaseDayNet(models.Model):
     total_net = fields.Float(string='累计净值', digits=(16, 4))
     fund_base_data_id = fields.Many2one('fund.base.data', string='基金基础数据', index=True)
 
+    _sql_constraints = [
+        ('unique_dates_fund_base_data_id', 'unique (fund_base_data_id,dates)', '日净值日期不能重复!')
+    ]
+

@@ -10,14 +10,14 @@
                     <sheet string="导入基金基础数据">
                         <group>
                             <group>
-                                <field name="years"/>
+                                <field name="binary_data"/>
                             </group>
                             <group>
                             </group>
                         </group>
                     </sheet>
                     <footer>
-                        <button name="act_create_wizard" string="确认" type="object" class="btn-primary" />
+                        <button name="action_import_create_fund_base_data" string="确认" type="object" class="btn-primary" />
                         <button string="Cancel" class="btn-secondary" special="cancel"/>
                     </footer>
 				</form>
@@ -28,19 +28,43 @@
             <field name="type">ir.actions.act_window</field>
             <field name="res_model">wizard</field>
             <field name="view_type">form</field>
-            <field name="view_mode">tree,form</field>
-            <field name="view_id" ref="wizard_form"/>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="import_fund_base_data_wizard_form"/>
             <field name="target">new</field>
             <field name="binding_model_id" ref="fund_base.model_fund_base_data"/>
         </record>
-        <record model="ir.actions.act_window" id="wizard_action">
-            <field name="name">新增年度交易日</field>
+
+        <record id="import_market_situation_form" model="ir.ui.view">
+            <field name="name">wizard</field>
+            <field name="model">wizard</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+				<form string="导入大盘数据">
+                    <sheet string="导入大盘数据">
+                        <group>
+                            <group>
+                                <field name="binary_data"/>
+                            </group>
+                            <group>
+                            </group>
+                        </group>
+                    </sheet>
+                    <footer>
+                        <button name="action_import_create_market_situation" string="确认" type="object" class="btn-primary" />
+                        <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    </footer>
+				</form>
+            </field>
+        </record>
+        <record id="wizard_market_situation_from" model="ir.actions.act_window">
+            <field name="name">导入大盘数据</field>
             <field name="type">ir.actions.act_window</field>
             <field name="res_model">wizard</field>
             <field name="view_type">form</field>
             <field name="view_mode">form</field>
+            <field name="view_id" ref="import_market_situation_form"/>
             <field name="target">new</field>
-            <field name="view_id" ref="wizard_form"/>
+            <field name="binding_model_id" ref="fund_base.model_market_situation"/>
         </record>
     </data>
 </odoo>
