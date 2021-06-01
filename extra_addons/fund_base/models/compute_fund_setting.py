@@ -28,6 +28,20 @@ class ComputeFundSetting(models.Model):
     market_config_ids = fields.Many2many('market.config', string='选择标的')
     filter_fund_base_data_ids = fields.One2many('filter.fund.base.data', 'compute_fund_setting_id', string='筛选后数据')
 
+    def import_data(self, data):
+        df = pd.read_excel(data)
+        size = df.shape[0]
+        for i in range(0, size):
+            code = df.iloc[i]['编码']
+            dates = df.iloc[i]['时间']
+            n = df.iloc[i]['数量']
+            self.env['fund.base.data'].search([('code', '=',)])
+        df = pd.read_excel(data)
+        data_groups = df.groupby('编码')
+        for i, d in data_groups:
+
+            print(d['编码'], d['名称'], d['时间'], ['数量'])
+
     def filter_workflow(self, data):
         data_ratio = (data['total_net'] != 0).sum() / data.shape[0]
         # 交易量在90%以下
