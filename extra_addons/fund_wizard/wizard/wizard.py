@@ -10,9 +10,13 @@ class Wizard(models.TransientModel):
     years_selection = list(years_tuple)
 
     years = fields.Selection(years_selection, '年')
+    binary_data = fields.Binary(string='选择文件', attachment=True)
+
+    def action_import_create_fund_base_data(self):
+        pass
     # act_create_wizard 用于创建记录
     # act_refresh_wizard 用于刷新记录
-    def act_create_wizard(self):
-        active_model = self._context.get('active_model')
-        active_ids = self._context.get('active_ids')
-        self.env[active_model].browse(active_ids).create_transaction_date({'years': self.years})
+    # def act_create_wizard(self):
+    #     active_model = self._context.get('active_model')
+    #     active_ids = self._context.get('active_ids')
+    #     self.env[active_model].browse(active_ids).create_transaction_date({'years': self.years})
