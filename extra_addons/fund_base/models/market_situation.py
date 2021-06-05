@@ -115,7 +115,7 @@ class MarketDaySituation(models.Model):
             ('close_quoation', '!=', 0)
         ], order='dates desc', limit=1)
         if d and d_1:
-            interest_rate = (d_1.close_quoation / d.close_quoation) - 1
+            interest_rate = (d.close_quoation / d_1.close_quoation) - 1
         elif d:
             interest_rate = 0
         else:
