@@ -8,10 +8,10 @@
             <field name="type">tree</field>
             <field name="arch" type="xml">
                 <tree string="交易日管理" editable="bottom">
-                    <field name='code' />
-                    <field name='name' />
-                    <field name='beg_date' />
-                    <field name='end_date' />
+                    <field name='code' required="1"/>
+                    <field name='name' required="1"/>
+                    <field name='beg_date' required="1"/>
+                    <field name='end_date' required="1"/>
                     <field name='remark' />
                 </tree>
             </field>

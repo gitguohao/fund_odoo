@@ -8,8 +8,8 @@
             <field name="type">tree</field>
             <field name="arch" type="xml">
                 <tree string="交易日管理">
-                    <field name='name' />
                     <field name='code' />
+                    <field name='name' />
                     <field name='remark' />
                 </tree>
             </field>
@@ -32,7 +32,6 @@
                         </group>
                         <notebook>
                             <page string="交易日管理" >
-                                <!--<button name="%(fund_base.wizard_action)d" string="新增年度交易日" type="action" class="btn-primary"/>-->
                                 <field name="transaction_date_year_ids">
                                     <tree>
                                         <field name="years" />

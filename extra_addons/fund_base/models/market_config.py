@@ -10,3 +10,6 @@ class MarketConfig(models.Model):
     beg_date = fields.Date(string='开始时间')
     end_date = fields.Date(string='结束时间')
     remark = fields.Char('备注')
+    _sql_constraints = [
+        ('unique_code', 'unique (code)', '编码必须唯一!')
+    ]

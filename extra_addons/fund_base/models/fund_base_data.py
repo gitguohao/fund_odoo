@@ -7,10 +7,10 @@ class FundBaseData(models.Model):
     _description = u'基金基础数据'
     code = fields.Char(string='编码')
     name = fields.Char(string='名称')
-    last_price = fields.Float(string='最新现价', digits=(16, 4))
-    last_price_date = fields.Datetime(string='最新现价时间')
-    unit_net = fields.Float(string='单位净值', digits=(16, 4))
-    total_net = fields.Float(string='累计净值', digits=(16, 4))
+    last_price = fields.Float(string='最新现价', digits=(16, 4), compute='compute_fund_base_day_net_id')
+    last_price_date = fields.Date(string='最新现价时间', compute='compute_fund_base_day_net_id')
+    unit_net = fields.Float(string='单位净值', digits=(16, 4), compute='compute_fund_base_day_net_id')
+    total_net = fields.Float(string='累计净值', digits=(16, 4), compute='compute_fund_base_day_net_id')
     types = fields.Char(string='类型')
     establish_date = fields.Date(string='成立日')
     fund_manager = fields.Char(string='基金经理人')
@@ -18,9 +18,20 @@ class FundBaseData(models.Model):
     fund_base_day_net_ids = fields.One2many('fund.base.day.net', 'fund_base_data_id', string='日净值')
     fund_base_day_net_id = fields.Many2one('fund.base.day.net', string='日净值')
 
+    def compute_fund_base_day_net_id(self):
+        for rec in self:
+            fund_base_data = rec.get_fund_base_day_net_id()
+            if fund_base_data:
+                rec.last_price_date = str(fund_base_data.get('dates', ''))
+                rec.last_price = fund_base_data.get('last_price', '')
+                rec.unit_net = fund_base_data.get('unit_net', '')
+                rec.total_net = fund_base_data.get('total_net', '')
+
     def get_fund_base_day_net_id(self):
         sql = '''
         select n.id as fund_base_day_net_id
+        , n.dates as dates
+        , n.end_price as last_price
         , n.unit_net as unit_net
         , n.total_net as total_net
         from fund_base_day_net n
@@ -35,19 +46,19 @@ class FundBaseData(models.Model):
             vals.update(res)
         return vals
 
-    def write(self, vals):
-        if 'fund_base_day_net_ids' in vals:
-            # 写入日净值
-            super(FundBaseData, self).write({'fund_base_day_net_ids': vals['fund_base_day_net_ids']})
-            del vals['fund_base_day_net_ids']
-
-            # 获取最后日净值记录
-            fund_base_day_net_vals = self.get_fund_base_day_net_id()
-            rid = fund_base_day_net_vals.get('fund_base_day_net_id', 0)
-
-            if not self.fund_base_day_net_id or self.fund_base_day_net_id.id != rid:
-                vals.update(fund_base_day_net_vals)
-        return super(FundBaseData, self).write(vals)
+    # def write(self, vals):
+    #     if 'fund_base_day_net_ids' in vals:
+    #         # 写入日净值
+    #         super(FundBaseData, self).write({'fund_base_day_net_ids': vals['fund_base_day_net_ids']})
+    #         del vals['fund_base_day_net_ids']
+    #
+    #         # 获取最后日净值记录
+    #         fund_base_day_net_vals = self.get_fund_base_day_net_id()
+    #         rid = fund_base_day_net_vals.get('fund_base_day_net_id', 0)
+    #
+    #         if not self.fund_base_day_net_id or self.fund_base_day_net_id.id != rid:
+    #             vals.update(fund_base_day_net_vals)
+    #     return super(FundBaseData, self).write(vals)
 
 
 class FundBaseDayNet(models.Model):

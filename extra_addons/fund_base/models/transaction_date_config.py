@@ -13,6 +13,10 @@ class TransactionDateConfig(models.Model):
     remark = fields.Char('备注')
     transaction_date_year_ids = fields.One2many('transaction.date.year', 'transaction_date_config_id',string='交易日配置')
 
+    _sql_constraints = [
+        ('unique_code', 'unique (code)', '编码必须唯一!')
+    ]
+
     # 获取交易日
     # @fn_timer
     def get_transaction_dates(self, b_date, e_date, **kwargs):
@@ -67,3 +71,6 @@ class TransactionDate(models.Model):
     is_transaction_selection = fields.Selection([('y', '是'),('n', '否')], string='是否交易日')
     transaction_date_year_id = fields.Many2one('transaction.date.year', string='交易日配置-年')
     transaction_date_config_id = fields.Many2one('transaction.date.config', string='交易日配置')
+    _sql_constraints = [
+        ('unique_transaction_date_year_id_dates', 'unique (transaction_date_year_id,dates)', '日期必须唯一!')
+    ]

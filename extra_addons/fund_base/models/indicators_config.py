@@ -10,3 +10,7 @@ class IndicatorsConfig(models.Model):
     english = fields.Char(string='英文')
     formula = fields.Char(string='公式')
     remark = fields.Char(string='说明')
+
+    _sql_constraints = [
+        ('unique_code', 'unique (code)', '编码必须唯一!')
+    ]

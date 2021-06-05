@@ -30,6 +30,10 @@ class ComputeFundSetting(models.Model):
     market_config_ids = fields.Many2many('market.config', string='选择标的')
     filter_fund_base_data_ids = fields.One2many('filter.fund.base.data', 'compute_fund_setting_id', string='筛选后数据')
 
+    _sql_constraints = [
+        ('unique_code', 'unique (code)', '编码必须唯一!')
+    ]
+
     def import_data(self, data):
         excel = xlrd.open_workbook(file_contents=base64.decodestring(data))
         sh = excel.sheet_by_index(0)

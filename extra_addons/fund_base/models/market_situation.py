@@ -16,6 +16,10 @@ class MarketSituation(models.Model):
     remark = fields.Char(string='备注')
     market_day_situation_ids = fields.One2many('market.day.situation', 'market_situation_id', string='日行情')
 
+    _sql_constraints = [
+        ('unique_code', 'unique (code)', '编码必须唯一!')
+    ]
+
     def import_data(self, data):
         excel = xlrd.open_workbook(file_contents=base64.decodestring(data))
         sh = excel.sheet_by_index(0)
@@ -56,7 +60,6 @@ class MarketDaySituation(models.Model):
     close_quoation = fields.Float('收盘点位', digits=(16, 4))
     interest_rate = fields.Float(string='日收益率', digits=(16, 4))
     market_situation_id = fields.Many2one('market.situation', string='大盘行情数据')
-
 
     _sql_constraints = [
         ('unique_dates_fund_base_data_id', 'unique (market_situation_id,dates)', '日行情日期不能重复!')
