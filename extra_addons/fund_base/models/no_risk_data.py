@@ -12,7 +12,7 @@ class NoRiskData(models.Model):
     types = fields.Char(string='类型')
     interest_rate = fields.Float(string='收益率(%)')
     last_transaction_date = fields.Date(string='最新交易日')
-    transaction_date_config_id = fields.Many2one('transaction.date.config', string='所属交易日')
+    transaction_date_config_id = fields.Many2one('transaction.date.config', string='所属交易日', ondelete='restrict')
     remark = fields.Char(string='备注')
     no_risk_data_lines = fields.One2many('no.risk.data.line', 'no_risk_data_id', string='无风险收益率明细')
 

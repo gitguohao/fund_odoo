@@ -1,7 +1,8 @@
 # coding: utf-8
 import xlrd
 import base64
-from odoo import models, fields
+from odoo.exceptions import UserError
+from odoo import models, fields, _
 
 
 class MarketSituation(models.Model):
@@ -9,10 +10,10 @@ class MarketSituation(models.Model):
     _description = u'大盘行情数据'
     code = fields.Char(string='指数代码')
     name = fields.Char(string='指数名称')
-    opening_quotation = fields.Float(string='最新开盘点位')
-    close_quoation = fields.Float(string='最新收盘点位')
-    last_transaction_date = fields.Date(string='最新交易日')
-    transaction_date_config_id = fields.Many2one('transaction.date.config', string='所属交易日')
+    opening_quotation = fields.Float(string='最新开盘点位', compute='compute_market_day_situation_id')
+    close_quoation = fields.Float(string='最新收盘点位', compute='compute_market_day_situation_id')
+    last_transaction_date = fields.Date(string='最新交易日', compute='compute_market_day_situation_id')
+    transaction_date_config_id = fields.Many2one('transaction.date.config', string='所属交易日', ondelete='restrict')
     remark = fields.Char(string='备注')
     market_day_situation_ids = fields.One2many('market.day.situation', 'market_situation_id', string='日行情')
 
@@ -20,10 +21,36 @@ class MarketSituation(models.Model):
         ('unique_code', 'unique (code)', '编码必须唯一!')
     ]
 
+    def compute_market_day_situation_id(self):
+        for rec in self:
+            market_day_situation_vals = rec.get_market_day_situation_id()
+            if market_day_situation_vals:
+                rec.opening_quotation = str(market_day_situation_vals.get('opening_quotation', ''))
+                rec.close_quoation = market_day_situation_vals.get('close_quoation', '')
+                rec.last_transaction_date = str(market_day_situation_vals.get('dates', ''))
+
+    def get_market_day_situation_id(self):
+        sql = '''
+        select n.dates as dates
+        , n.opening_quotation as opening_quotation
+        , n.close_quoation as close_quoation
+        from market_day_situation n
+        where n.market_situation_id={market_situation_id}
+        and (close_quoation != 0)
+        order by n.dates desc limit 1
+        '''.format(market_situation_id=self.id)
+        self._cr.execute(sql)
+        res = self._cr.dictfetchone()
+        vals = {}
+        if res:
+            vals.update(res)
+        return vals
+
     def import_data(self, data):
         excel = xlrd.open_workbook(file_contents=base64.decodestring(data))
         sh = excel.sheet_by_index(0)
         cell_values = sh._cell_values
+        success_c = 0
         for rx in range(sh.nrows):
             if rx == 0: continue
             code = cell_values[rx][0]
@@ -43,6 +70,9 @@ class MarketSituation(models.Model):
                             'close_quoation': close_quoation,
                         }
                     self.env['market.day.situation'].create(vals)
+        num = sh.nrows - 1
+        notes = '共导入{num}条数据,成功导入{success_c}条,失败{fail_c}'.format(num=num, success_c=success_c, fail_c=(num-success_c))
+        return notes
 
     def get_market_situation(self, b_date, e_date, transaction_date_config_id, **kwargs):
         transaction_dates = transaction_date_config_id.get_transaction_dates(b_date, e_date)
@@ -58,9 +88,49 @@ class MarketDaySituation(models.Model):
     dates = fields.Date('交易日')
     opening_quotation = fields.Float('开盘点位', digits=(16, 4))
     close_quoation = fields.Float('收盘点位', digits=(16, 4))
-    interest_rate = fields.Float(string='日收益率', digits=(16, 4))
+    interest_rate = fields.Float(string='日收益率', digits=(16, 4), compute='compute_interest_rate')
     market_situation_id = fields.Many2one('market.situation', string='大盘行情数据')
 
     _sql_constraints = [
         ('unique_dates_fund_base_data_id', 'unique (market_situation_id,dates)', '日行情日期不能重复!')
     ]
+
+    def compute_interest_rate(self):
+        for rec in self:
+            interest_rate = rec.get_interest_rate()
+            rec.interest_rate = interest_rate
+
+    def get_interest_rate(self):
+        # 当天行情
+        d = self.search([
+            ('dates', '=', self.dates),
+            ('market_situation_id', '=', self.market_situation_id.id),
+            ('close_quoation', '!=', 0)
+        ])
+
+        # 上一天的
+        d_1 = self.search([
+            ('dates', '<', self.dates),
+            ('market_situation_id', '=', self.market_situation_id.id),
+            ('close_quoation', '!=', 0)
+        ], order='dates desc', limit=1)
+        if d and d_1:
+            interest_rate = (d_1.close_quoation / d.close_quoation) - 1
+        elif d:
+            interest_rate = 0
+        else:
+            interest_rate = 0
+        return interest_rate
+
+    def check(self, vals):
+        if 'close_quoation' in vals:
+            if vals['close_quoation'] != 0:
+                raise UserError(_(u'收盘点位不能等于0'))
+
+    def create(self, vals_list):
+        self.check(vals_list)
+        return super(MarketDaySituation, self).create(vals_list)
+
+    def wirte(self, vals):
+        self.check(vals)
+        return super(MarketDaySituation, self).wirte(vals)

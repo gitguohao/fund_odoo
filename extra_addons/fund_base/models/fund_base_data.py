@@ -17,6 +17,16 @@ class FundBaseData(models.Model):
     manager = fields.Char(string='管理人')
     fund_base_day_net_ids = fields.One2many('fund.base.day.net', 'fund_base_data_id', string='日净值')
     fund_base_day_net_id = fields.Many2one('fund.base.day.net', string='日净值')
+    x1 = fields.Char(string='自定义1')
+    x2 = fields.Char(string='自定义2')
+    x3 = fields.Char(string='自定义3')
+    x4 = fields.Char(string='自定义4')
+    x5 = fields.Char(string='自定义5')
+    x6 = fields.Char(string='自定义6')
+    x7 = fields.Char(string='自定义7')
+    x8 = fields.Char(string='自定义8')
+    x9 = fields.Char(string='自定义9')
+    x10 = fields.Char(string='自定义10')
 
     def compute_fund_base_day_net_id(self):
         for rec in self:
@@ -36,7 +46,7 @@ class FundBaseData(models.Model):
         , n.total_net as total_net
         from fund_base_day_net n
         where n.fund_base_data_id={fund_base_data_id}
-        and beg_price !=0 and end_price != 0
+        and (end_price != 0 or unit_net!=0 or total_net!=0)
         order by n.dates desc limit 1
         '''.format(fund_base_data_id=self.id)
         self._cr.execute(sql)

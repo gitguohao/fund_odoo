@@ -8,8 +8,8 @@ from extra_addons.tools import fn_timer
 class TransactionDateConfig(models.Model):
     _name = 'transaction.date.config'
     _description = u'交易日管理'
-    name = fields.Char('名称')
-    code = fields.Char('编码')
+    name = fields.Char('名称', required="1")
+    code = fields.Char('编码', required="1")
     remark = fields.Char('备注')
     transaction_date_year_ids = fields.One2many('transaction.date.year', 'transaction_date_config_id',string='交易日配置')
 

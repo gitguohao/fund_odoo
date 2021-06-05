@@ -27,19 +27,20 @@
                     <sheet string="无风险收益率">
                         <group>
                             <group>
-                                <field name="code"/>
-                                <field name="transaction_date_config_id"/>
+                                <field name="code" required="1"/>
+                                <field name="transaction_date_config_id" required="1"/>
                             </group>
                             <group>
-                                <field name="name"/>
+                                <field name="name" required="1"/>
                             </group>
                         </group>
                         <notebook>
                             <page string="日收益率" >
                                 <field name="no_risk_data_lines">
-                                    <tree editable="bottom" default_order="transaction_date desc">
+                                    <tree editable="bottom" default_order="transaction_date desc" delete="0">
                                         <field name="transaction_date" />
                                         <field name="interest_rate" />
+                                        <button name="unlink" string="删除" type="object" class="btn-primary" confirm="你确定要删除此记录吗？"/>
                                     </tree>
                                 </field>
                             </page>

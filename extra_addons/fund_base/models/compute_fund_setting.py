@@ -15,35 +15,45 @@ class ComputeFundSetting(models.Model):
     code = fields.Char(string='模型编码')
     name = fields.Char(string='模型名称')
     time_types = fields.Selection([('day', '天'), ('week', '周'), ('month', '月')], string='时间维度')
-    transaction_date_config_id = fields.Many2one('transaction.date.config', string='交易日')
+    transaction_date_config_id = fields.Many2one('transaction.date.config', string='交易日', ondelete='cascade')
     beg_date = fields.Date(string='开始时间')
     end_date = fields.Date(string='结束时间', default=date.today())
     last_compute_indicators_datetime = fields.Datetime(string='最新指标计算时间')
-    no_risk_data_id = fields.Many2one('no.risk.data', string='选择标的')
+    no_risk_data_id = fields.Many2one('no.risk.data', string='选择标的', ondelete='restrict')
     system_no_risk_data_rate = fields.Float(string='系统计算RF结果', digits=(16, 4))
     manual_no_risk_data_rate = fields.Float(string='手动计算RF结果', digits=(16, 4))
     risk_types = fields.Selection([('system', '系统'), ('manual', '手动')], default='system', string='选择系统/手动的RF结果')
-    rm_setting_ids = fields.One2many('rm.setting', 'compute_fund_setting_id', string='选择标的')
+    rm_setting_ids = fields.One2many('rm.setting', 'compute_fund_setting_id', string='选择标的', ondelete='cascade')
     rm_rate = fields.Float(string='基准综合收益率', digits=(16, 4))
     fund_base_all = fields.Boolean(string='总览')
     fund_base_year = fields.Boolean(string='近一年')
-    market_config_ids = fields.Many2many('market.config', string='选择标的')
+    market_config_ids = fields.Many2many('market.config', string='选择标的', ondelete='restrict')
     filter_fund_base_data_ids = fields.One2many('filter.fund.base.data', 'compute_fund_setting_id', string='筛选后数据')
 
     _sql_constraints = [
         ('unique_code', 'unique (code)', '编码必须唯一!')
     ]
-
     def import_data(self, data):
         excel = xlrd.open_workbook(file_contents=base64.decodestring(data))
         sh = excel.sheet_by_index(0)
         cell_values = sh._cell_values
+        success_c = 0
         for rx in range(sh.nrows):
             if rx == 0: continue
+            # 编码
             code = cell_values[rx][0]
+            # 名称
             name = cell_values[rx][1]
+            # 日期
             dates = cell_values[rx][2]
-            total_net = cell_values[rx][3]
+            # 开盘价
+            beg_price = cell_values[rx][3]
+            # 收盘价
+            end_price = cell_values[rx][4]
+            # 单位净值
+            unit_net = cell_values[rx][5]
+            # 累计净值
+            total_net = cell_values[rx][6]
             fund_base_data = self.env['fund.base.data'].search([('code', '=', code)])
             if fund_base_data:
                 fid = fund_base_data.id
@@ -53,8 +63,15 @@ class ComputeFundSetting(models.Model):
                             'fund_base_data_id': fund_base_data.id,
                             'dates': dates,
                             'total_net': total_net,
+                            'beg_price': beg_price,
+                            'end_price': end_price,
+                            'unit_net': unit_net,
                         }
+                    success_c += 1
                     self.env['fund.base.day.net'].create(vals)
+        num = sh.nrows - 1
+        notes = '共导入{num}条数据,成功导入{success_c}条,失败{fail_c}'.format(num=num, success_c=success_c, fail_c=(num-success_c))
+        return notes
 
     def filter_workflow(self, data):
         data_ratio = (data['total_net'] != 0).sum() / data.shape[0]
@@ -191,7 +208,7 @@ class ComputeFundSetting(models.Model):
 class RmSetting(models.Model):
     _name = "rm.setting"
     _description = u'设置基准收益率'
-    market_situation_id = fields.Many2one('market.situation', string='选择指数')
+    market_situation_id = fields.Many2one('market.situation', string='选择指数', ondelete='restrict')
     ratio = fields.Integer('占比(%)')
     compute_fund_setting_id = fields.Many2one('compute.fund.setting', string='计算模型')
 

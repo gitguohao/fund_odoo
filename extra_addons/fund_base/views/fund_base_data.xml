@@ -30,25 +30,36 @@
                     <sheet string="交易日管理">
                         <group>
                             <group>
-                                <field name="code"/>
+                                <field name="code" required="1"/>
                                 <field name="types"/>
                                 <field name="fund_manager"/>
+                                <field name="x1"/>
+                                <field name="x3"/>
+                                <field name="x5"/>
+                                <field name="x7"/>
+                                <field name="x9"/>
                             </group>
                             <group>
-                                <field name="name"/>
-                                <field name="establish_date"/>
+                                <field name="name" required="1"/>
+                                <field name="establish_date" required="1"/>
                                 <field name="manager"/>
+                                <field name="x2"/>
+                                <field name="x4"/>
+                                <field name="x6"/>
+                                <field name="x8"/>
+                                <field name="x10"/>
                             </group>
                         </group>
                         <notebook>
                             <page string="日净值" >
-                                <field name="fund_base_day_net_ids">
-                                    <tree editable="bottom">
-                                        <field name="dates" />
+                                <field name="fund_base_day_net_ids" default_order="dates desc">
+                                    <tree editable="bottom" default_order="dates desc" delete="0">
+                                        <field name="dates" required="1"/>
                                         <field name="beg_price" />
                                         <field name="end_price" />
                                         <field name="unit_net" />
                                         <field name="total_net" />
+                                        <button name="unlink" string="删除" type="object" class="btn-primary" confirm="你确定要删除此记录吗？"/>
                                     </tree>
                                 </field>
                             </page>

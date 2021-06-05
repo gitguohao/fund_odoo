@@ -1,5 +1,6 @@
 # coding: utf-8
-from odoo import models, fields
+from odoo.exceptions import UserError
+from odoo import models, fields, _
 
 
 class Wizard(models.TransientModel):
@@ -13,10 +14,14 @@ class Wizard(models.TransientModel):
     binary_data = fields.Binary(string='选择文件', attachment=True)
 
     def action_import_create_fund_base_data(self):
-        self.env['compute.fund.setting'].import_data(self.binary_data)
+        notes = self.env['compute.fund.setting'].import_data(self.binary_data)
+        self._cr.commit()
+        raise UserError(_(notes))
 
     def action_import_create_market_situation(self):
-        self.env['market.situation'].import_data(self.binary_data)
+        notes = self.env['market.situation'].import_data(self.binary_data)
+        self._cr._commit()
+        raise UserError(_(notes))
 
     # act_create_wizard 用于创建记录
     # act_refresh_wizard 用于刷新记录
