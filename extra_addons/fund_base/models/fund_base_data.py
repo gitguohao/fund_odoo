@@ -1,11 +1,12 @@
 # coding: utf-8
 from odoo import models, fields
+from extra_addons.tools import regular
 
 
 class FundBaseData(models.Model):
     _name = 'fund.base.data'
     _description = u'基金基础数据'
-    code = fields.Char(string='编码')
+    code = fields.Char(string='编码', regular=regular, tips='编码只能输入字母或汉字!')
     name = fields.Char(string='名称')
     last_price = fields.Float(string='最新现价', digits=(16, 4), compute='compute_fund_base_day_net_id')
     last_price_date = fields.Date(string='最新现价时间', compute='compute_fund_base_day_net_id')

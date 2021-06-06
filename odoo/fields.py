@@ -1510,6 +1510,8 @@ class Char(_String):
     _slots = {
         'size': None,                   # maximum size of values (deprecated)
         'trim': True,                   # whether value is trimmed (only by web client)
+        'regular': None,
+        'tips': '',
     }
 
     @property

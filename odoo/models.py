@@ -3324,6 +3324,8 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
             if not field:
                 unknown_names.append(key)
                 continue
+            if field.type == 'char' and field.regular:
+                self.external_check(field.regular, field.tips, val)
             if field.store:
                 store_vals[key] = val
             if field.inherited:
@@ -3505,6 +3507,15 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
 
         return True
 
+    def external_check(self, regular, tips, value):
+        import re
+        from odoo.exceptions import UserError
+        from odoo import _
+        r = re.match(regular, value)
+        if r == None or r.regs[0][1] != r.endpos:
+            raise UserError(_(tips))
+
+
     @api.model_create_multi
     @api.returns('self', lambda value: value.id)
     def create(self, vals_list):
@@ -3566,6 +3577,8 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
                 if not field:
                     unknown_names.add(key)
                     continue
+                if field.type == 'char' and field.regular:
+                    self.external_check(field.regular, field.tips, val)
                 if field.store:
                     stored[key] = val
                 if field.inherited:

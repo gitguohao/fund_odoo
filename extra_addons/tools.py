@@ -6,7 +6,8 @@ from functools import wraps
 
 _logger = logging.getLogger(__name__)
 
-
+# 只能包含数字和字母
+regular = '[0-9a-zA-Z]+'
 def fn_timer(function):
     @wraps(function)
     def function_timer(*args, **kwargs):

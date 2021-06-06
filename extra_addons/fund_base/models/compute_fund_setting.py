@@ -5,6 +5,7 @@ from odoo import models, fields, api
 from datetime import date, timedelta
 import xlrd
 import base64
+from extra_addons.tools import regular
 
 n = 4
 
@@ -12,7 +13,7 @@ n = 4
 class ComputeFundSetting(models.Model):
     _name = "compute.fund.setting"
     _description = u'计算模型设置'
-    code = fields.Char(string='模型编码')
+    code = fields.Char(string='模型编码', regular=regular, tips='编码只能输入字母或汉字!')
     name = fields.Char(string='模型名称')
     time_types = fields.Selection([('day', '天'), ('week', '周'), ('month', '月')], string='时间维度')
     transaction_date_config_id = fields.Many2one('transaction.date.config', string='交易日', ondelete='cascade')

@@ -1,13 +1,13 @@
 # coding: utf-8
 import datetime as dt
 from odoo import models, fields
-from extra_addons.tools import fn_timer
+from extra_addons.tools import regular
 
 
 class NoRiskData(models.Model):
     _name = 'no.risk.data'
     _description = u'无风险数据'
-    code = fields.Char(string='编码')
+    code = fields.Char(string='编码', regular=regular, tips='编码只能输入字母或汉字!')
     name = fields.Char(string='名称')
     types = fields.Char(string='类型')
     interest_rate = fields.Float(string='收益率(%)')

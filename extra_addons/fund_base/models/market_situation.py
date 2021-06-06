@@ -1,14 +1,16 @@
 # coding: utf-8
 import xlrd
+import math
 import base64
 from odoo.exceptions import UserError
 from odoo import models, fields, _
+from extra_addons.tools import regular
 
 
 class MarketSituation(models.Model):
     _name = 'market.situation'
     _description = u'大盘行情数据'
-    code = fields.Char(string='指数代码')
+    code = fields.Char(string='指数代码', regular=regular, tips='编码只能输入字母或汉字!')
     name = fields.Char(string='指数名称')
     opening_quotation = fields.Float(string='最新开盘点位', compute='compute_market_day_situation_id')
     close_quoation = fields.Float(string='最新收盘点位', compute='compute_market_day_situation_id')
@@ -97,27 +99,39 @@ class MarketDaySituation(models.Model):
 
     def compute_interest_rate(self):
         for rec in self:
-            interest_rate = rec.get_interest_rate()
+            interest_rate = 0
+            if rec.close_quoation != 0:
+                interest_rate = rec.get_interest_rate()
+            interest_rate = math.floor(interest_rate * 10 ** 4) / (10 ** 4)
             rec.interest_rate = interest_rate
 
     def get_interest_rate(self):
-        # 当天行情
-        d = self.search([
-            ('dates', '=', self.dates),
-            ('market_situation_id', '=', self.market_situation_id.id),
-            ('close_quoation', '!=', 0)
-        ])
+        transaction_date_config = self.market_situation_id.transaction_date_config_id
+        transaction_dates = self.env['transaction.date'].search([
+            ('transaction_date_config_id', '=', transaction_date_config.id),
+            ('dates', '<=', self.dates),
+            ('is_transaction_selection', '=', 'y')
+        ], order='dates desc', limit=2)
+        if len(transaction_dates) == 2:
+            # 当天行情
+            d = self.search([
+                ('dates', '=', transaction_dates[0].dates),
+                ('market_situation_id', '=', self.market_situation_id.id),
+                ('close_quoation', '!=', 0)
+            ], limit=1)
 
-        # 上一天的
-        d_1 = self.search([
-            ('dates', '<', self.dates),
-            ('market_situation_id', '=', self.market_situation_id.id),
-            ('close_quoation', '!=', 0)
-        ], order='dates desc', limit=1)
-        if d and d_1:
-            interest_rate = (d.close_quoation / d_1.close_quoation) - 1
-        elif d:
-            interest_rate = 0
+            # 上一天的
+            d_1 = self.search([
+                ('dates', '=', transaction_dates[1].dates),
+                ('market_situation_id', '=', self.market_situation_id.id),
+                ('close_quoation', '!=', 0)
+            ], order='dates desc', limit=1)
+            if d and d_1:
+                interest_rate = (d.close_quoation / d_1.close_quoation) - 1
+            elif d:
+                interest_rate = 0
+            else:
+                interest_rate = 0
         else:
             interest_rate = 0
         return interest_rate

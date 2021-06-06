@@ -46,7 +46,7 @@
                                                 <group>
                                                 </group>
                                                 <field name="transaction_date_ids">
-                                                    <tree editable="bottom">
+                                                    <tree editable="bottom" delete="0">
                                                         <field name="dates" />
                                                         <field name="is_transaction_selection" />
                                                     </tree>
