@@ -13,14 +13,18 @@ class Wizard(models.TransientModel):
     years = fields.Selection(years_selection, '年')
     binary_data = fields.Binary(string='选择文件', attachment=True)
 
-    def action_import_create_fund_base_data(self):
-        notes = self.env['compute.fund.setting'].import_data(self.binary_data)
-        self._cr.commit()
-        raise UserError(_(notes))
+    def action_import_create(self):
+        action_types = self._context.get('types', '')
 
-    def action_import_create_market_situation(self):
-        notes = self.env['market.situation'].import_data(self.binary_data)
-        self._cr._commit()
+        if action_types == 'fund_title':
+            notes = self.env['fund.base.data'].import_fund_title_data(self.binary_data)
+        elif action_types == 'fund_base_data':
+            notes = self.env['fund.base.data'].import_fund_base_data(self.binary_data)
+        elif action_types == 'market_situation':
+            notes = self.env['market.situation'].import_data(self.binary_data)
+        else:
+            notes = '导入失败,未定义导入类型,请联系管理员!'
+        self._cr.commit()
         raise UserError(_(notes))
 
     # act_create_wizard 用于创建记录

@@ -1,4 +1,6 @@
 # coding: utf-8
+import xlrd
+import base64
 from odoo import models, fields
 from extra_addons.tools import regular
 
@@ -28,6 +30,112 @@ class FundBaseData(models.Model):
     x8 = fields.Char(string='自定义8')
     x9 = fields.Char(string='自定义9')
     x10 = fields.Char(string='自定义10')
+
+    def import_fund_base_data(self, data):
+        excel = xlrd.open_workbook(file_contents=base64.decodestring(data))
+        sh = excel.sheet_by_index(0)
+        cell_values = sh._cell_values
+        success_c = 0
+        for rx in range(sh.nrows):
+            if rx == 0: continue
+            # 编码
+            code = cell_values[rx][0]
+            # 名称
+            name = cell_values[rx][1]
+            # 日期
+            dates = cell_values[rx][2]
+            # 开盘价
+            beg_price = cell_values[rx][3]
+            # 收盘价
+            end_price = cell_values[rx][4]
+            # 单位净值
+            unit_net = cell_values[rx][5]
+            # 累计净值
+            total_net = cell_values[rx][6]
+            fund_base_data = self.env['fund.base.data'].search([('code', '=', code)])
+            if fund_base_data:
+                fid = fund_base_data.id
+                fund_base_day_net = self.env['fund.base.day.net'].search([('fund_base_data_id', '=', fid), ('dates', '=', dates)])
+                if not fund_base_day_net:
+                    vals = {
+                            'fund_base_data_id': fund_base_data.id,
+                            'dates': dates,
+                            'total_net': total_net,
+                            'beg_price': beg_price,
+                            'end_price': end_price,
+                            'unit_net': unit_net,
+                        }
+                    success_c += 1
+                    self.env['fund.base.day.net'].create(vals)
+        num = sh.nrows - 1
+        notes = '共导入{num}条数据,成功导入{success_c}条,失败{fail_c}'.format(num=num, success_c=success_c, fail_c=(num-success_c))
+        return notes
+
+    def import_fund_title_data(self, data):
+        excel = xlrd.open_workbook(file_contents=base64.decodestring(data))
+        sh = excel.sheet_by_index(0)
+        cell_values = sh._cell_values
+        success_c = 0
+        for rx in range(sh.nrows):
+            if rx == 0: continue
+            # 编码
+            code = cell_values[rx][0]
+            # 名称
+            name = cell_values[rx][1]
+            # 类型
+            types = cell_values[rx][2]
+            # 成立日期
+            dates = cell_values[rx][3]
+            # 基金经理人
+            fund_manager = cell_values[rx][4]
+            # 管理人
+            manager = cell_values[rx][5]
+            # 备注1
+            x1 = cell_values[rx][6]
+            # 备注2
+            x2 = cell_values[rx][7]
+            # 备注3
+            x3 = cell_values[rx][8]
+            # 备注4
+            x4 = cell_values[rx][9]
+            # 备注5
+            x5 = cell_values[rx][10]
+            # 备注6
+            x6 = cell_values[rx][11]
+            # 备注7
+            x7 = cell_values[rx][12]
+            # 备注8
+            x8 = cell_values[rx][13]
+            # 备注9
+            x9 = cell_values[rx][14]
+            # 备注10
+            x10 = cell_values[rx][15]
+
+            fund_base_data = self.env['fund.base.data'].search([('code', '=', code)])
+            if not fund_base_data:
+                vals = {
+                        'code': code,
+                        'name': name,
+                        'types': types,
+                        'establish_date': dates,
+                        'fund_manager': fund_manager,
+                        'manager': manager,
+                        'x1': x1,
+                        'x2': x2,
+                        'x3': x3,
+                        'x4': x4,
+                        'x5': x5,
+                        'x6': x6,
+                        'x7': x7,
+                        'x8': x8,
+                        'x9': x9,
+                        'x10': x10,
+                    }
+                success_c += 1
+                self.env['fund.base.data'].create(vals)
+        num = sh.nrows - 1
+        notes = '共导入{num}条数据,成功导入{success_c}条,失败{fail_c}'.format(num=num, success_c=success_c, fail_c=(num-success_c))
+        return notes
 
     def compute_fund_base_day_net_id(self):
         for rec in self:

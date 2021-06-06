@@ -3,8 +3,6 @@ import math
 import pandas as pd
 from odoo import models, fields, api
 from datetime import date, timedelta
-import xlrd
-import base64
 from extra_addons.tools import regular
 
 n = 4
@@ -34,45 +32,6 @@ class ComputeFundSetting(models.Model):
     _sql_constraints = [
         ('unique_code', 'unique (code)', '编码必须唯一!')
     ]
-    def import_data(self, data):
-        excel = xlrd.open_workbook(file_contents=base64.decodestring(data))
-        sh = excel.sheet_by_index(0)
-        cell_values = sh._cell_values
-        success_c = 0
-        for rx in range(sh.nrows):
-            if rx == 0: continue
-            # 编码
-            code = cell_values[rx][0]
-            # 名称
-            name = cell_values[rx][1]
-            # 日期
-            dates = cell_values[rx][2]
-            # 开盘价
-            beg_price = cell_values[rx][3]
-            # 收盘价
-            end_price = cell_values[rx][4]
-            # 单位净值
-            unit_net = cell_values[rx][5]
-            # 累计净值
-            total_net = cell_values[rx][6]
-            fund_base_data = self.env['fund.base.data'].search([('code', '=', code)])
-            if fund_base_data:
-                fid = fund_base_data.id
-                fund_base_day_net = self.env['fund.base.day.net'].search([('fund_base_data_id', '=', fid), ('dates', '=', dates)])
-                if not fund_base_day_net:
-                    vals = {
-                            'fund_base_data_id': fund_base_data.id,
-                            'dates': dates,
-                            'total_net': total_net,
-                            'beg_price': beg_price,
-                            'end_price': end_price,
-                            'unit_net': unit_net,
-                        }
-                    success_c += 1
-                    self.env['fund.base.day.net'].create(vals)
-        num = sh.nrows - 1
-        notes = '共导入{num}条数据,成功导入{success_c}条,失败{fail_c}'.format(num=num, success_c=success_c, fail_c=(num-success_c))
-        return notes
 
     def filter_workflow(self, data):
         data_ratio = (data['total_net'] != 0).sum() / data.shape[0]
