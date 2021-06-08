@@ -60,8 +60,10 @@ class ComputeFundSetting(models.Model):
         SELECT
         fund_base_data_id AS fund_base_data_id,
         dates AS dates,
-        total_net AS total_net,
-        unit_net as unit_net
+        beg_price AS beg_price,
+        end_price AS end_price,
+        unit_net as unit_net,
+        total_net AS total_net
         FROM
             fund_base_day_net 
         WHERE
@@ -69,7 +71,7 @@ class ComputeFundSetting(models.Model):
         """.format(transaction_dates=tuple(transaction_dates)))
         select_data_lst = self._cr.dictfetchall()
 
-        df = pd.DataFrame(select_data_lst, columns=['fund_base_data_id', 'dates', 'total_net', 'unit_net'])
+        df = pd.DataFrame(select_data_lst, columns=['fund_base_data_id', 'dates','beg_price', 'end_price', 'total_net', 'unit_net'])
 
         df['dates'] = pd.to_datetime(df['dates'])
         df['total_net'] = pd.to_numeric(df['total_net'])
@@ -86,10 +88,16 @@ class ComputeFundSetting(models.Model):
                 })
                 for n in range(0, data.shape[0]):
                     dates = data.iloc[n]['dates']
+                    beg_price = data.iloc[n]['beg_price']
+                    end_price = data.iloc[n]['end_price']
                     unit_net = data.iloc[n]['unit_net']
+                    total_net = data.iloc[n]['total_net']
                     filter_fund_base_day_net_d = self.env['filter.fund.base.day.net'].create({
                         'dates': dates,
+                        'beg_price': beg_price,
+                        'end_price': end_price,
                         'unit_net': unit_net,
+                        'total_net': total_net,
                         'fund_base_data_id': filter_fund_base_data_d.id
                     })
 
@@ -189,7 +197,10 @@ class FilterFundBaseDayNet(models.Model):
     _name = 'filter.fund.base.day.net'
     _description = u'筛选后的日净值'
     dates = fields.Date('时间')
+    beg_price = fields.Float('开盘价', digits=(16, 4))
+    end_price = fields.Float('收盘价', digits=(16, 4))
     unit_net = fields.Float(string='单位净值', digits=(16, 4))
+    total_net = fields.Float(string='累计净值', digits=(16, 4))
     fund_base_data_id = fields.Many2one('filter.fund.base.data', string='基金基础数据', index=True)
 
 #

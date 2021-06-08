@@ -85,8 +85,8 @@
                             <page string="筛选后的数据">
                                 <field name="filter_fund_base_data_ids">
                                     <tree>
-                                        <field name="fund_base_data_id"/>
                                         <field name="code"/>
+                                        <field name="fund_base_data_id"/>
                                     </tree>
                                     <form>
                                         <sheet>
@@ -108,7 +108,10 @@
                                                     <field name="filter_fund_base_day_net_ids" >
                                                         <tree editable="bottom">
                                                             <field name="dates" />
+                                                            <field name="beg_price" />
+                                                            <field name="end_price" />
                                                             <field name="unit_net" />
+                                                            <field name="total_net" />
                                                         </tree>
                                                     </field>
                                                 </page>
