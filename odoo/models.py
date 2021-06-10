@@ -3512,7 +3512,7 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
         from odoo.exceptions import UserError
         from odoo import _
         r = re.match(regular, value)
-        if r == None or r.regs[0][1] != r.endpos:
+        if r == None:
             raise UserError(_(tips))
 
 
