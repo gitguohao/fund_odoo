@@ -59,10 +59,10 @@ class FundBaseData(models.Model):
         sheets = list(df_dicts.keys())
         df = df_dicts.get(sheets[0])
         model_name = types.model_id.model
-        filed_name = types.field_name
-        success_rows = 0
+        filed_name = types.field_name.name
         total_rows = df.shape[0]
-        df.apply(self.create_data, model_name=model_name, filed_name=filed_name, axis=0)
+        success_rows = df.apply(self.create_data, model_name=model_name, filed_name=filed_name, axis=0)
+        success_rows = max([success_row for success_row in success_rows.values])
         notes = '共导入{total_rows}条数据,成功导入{success_rows}条,失败{fail_rows}'.format(total_rows=total_rows, success_rows=success_rows, fail_rows=(total_rows - success_rows))
         return notes
 
