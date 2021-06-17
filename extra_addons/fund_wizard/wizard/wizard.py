@@ -19,7 +19,7 @@ class Wizard(models.TransientModel):
         if action_types == 'fund_title':
             notes = self.env['fund.base.data'].import_fund_title_data(self.binary_data)
         elif action_types == 'fund_base_data':
-            notes = self.env['fund.base.data'].import_fund_base_data(self.binary_data)
+            notes = self.env['fund.base.data'].import_fund_base_data(self.binary_data, self.action_type)
         elif action_types == 'market_situation':
             notes = self.env['market.situation'].import_data(self.binary_data)
         else:
