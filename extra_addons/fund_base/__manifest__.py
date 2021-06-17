@@ -18,6 +18,7 @@
         'views/transaction_date_config.xml',
         'views/market_config.xml',
         'views/compute_fund_setting.xml',
+        'views/import_data_config.xml',
         'views/menus.xml',
     ],
     # 'license': 'LGPL-3',

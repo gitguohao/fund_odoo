@@ -1,6 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
     <data>
+        <record id="import_fund_base_data_wizard_form1" model="ir.ui.view">
+            <field name="name">wizard</field>
+            <field name="model">wizard</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+				<form string="导入">
+                    <sheet string="导入">
+                        <group>
+                            <group>
+                                <field name="action_type" required="1"/>
+                                <field name="binary_data"/>
+                            </group>
+                            <group>
+                            </group>
+                        </group>
+                    </sheet>
+                    <footer>
+                        <button name="action_import_create" string="确认" type="object" class="btn-primary" />
+                        <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    </footer>
+				</form>
+            </field>
+        </record>
+
         <record id="import_fund_base_data_wizard_form" model="ir.ui.view">
             <field name="name">wizard</field>
             <field name="model">wizard</field>
@@ -23,6 +47,7 @@
 				</form>
             </field>
         </record>
+
         <record id="wizard_fund_title_from" model="ir.actions.act_window">
             <field name="name">导入基金</field>
             <field name="type">ir.actions.act_window</field>
@@ -41,7 +66,7 @@
             <field name="res_model">wizard</field>
             <field name="view_type">form</field>
             <field name="view_mode">form</field>
-            <field name="view_id" ref="import_fund_base_data_wizard_form"/>
+            <field name="view_id" ref="import_fund_base_data_wizard_form1"/>
             <field name="target">new</field>
             <field name="context">{'types' : 'fund_base_data'}</field>
             <field name="binding_model_id" ref="fund_base.model_fund_base_data"/>
