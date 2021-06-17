@@ -32,7 +32,7 @@ class FundBaseData(models.Model):
     x9 = fields.Char(string='自定义9')
     x10 = fields.Char(string='自定义10')
 
-    def create_data(self, df, types, model_name, filed):
+    def create_data(self, df, model_name, filed_name):
         code = df.name
         fund_base_data = self.env['fund.base.data'].search([('code', '=', code)])
         success_rows = 0
@@ -46,10 +46,10 @@ class FundBaseData(models.Model):
                     fund_base_day_net.create({
                         'fund_base_data_id': fid,
                         'dates': date,
-                        filed: value
+                        filed_name: value
                     })
                 else:
-                    fund_base_day_net.write({filed: value})
+                    fund_base_day_net.write({filed_name: value})
                 success_rows += 1
         return success_rows
 
@@ -59,10 +59,10 @@ class FundBaseData(models.Model):
         sheets = list(df_dicts.keys())
         df = df_dicts.get(sheets[0])
         model_name = types.model_id.model
-        filed = types.field_name
+        filed_name = types.field_name
         success_rows = 0
         total_rows = df.shape[0]
-        success_rows += df.apply(types, model_name, filed)
+        df.apply(self.create_data, model_name=model_name, filed_name=filed_name, axis=0)
         notes = '共导入{total_rows}条数据,成功导入{success_rows}条,失败{fail_rows}'.format(total_rows=total_rows, success_rows=success_rows, fail_rows=(total_rows - success_rows))
         return notes
 
