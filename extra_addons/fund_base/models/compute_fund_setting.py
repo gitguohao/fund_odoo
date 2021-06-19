@@ -118,16 +118,16 @@ class ComputeFundSetting(models.Model):
         a = (1 / size) * x['rate']
         rate = math.floor(a * 10 ** n) / (10 ** n)
         if times == 'year':
-            years = x.name
+            years = x.year
             names = '{years}年'.format(years=years)
             self.env['filter.no.risk.data.line.year'].create({
                 'name': names,
-                'years': x.name,
+                'years': years,
                 'interest_rate': rate,
                 'compute_fund_setting_id': self.id
             })
         elif times == 'month':
-            years, months = x.name[0], x.name[1]
+            years, months = x.year, x.month
             names = '{years}年{months}月'.format(years=years, months=months)
             self.env['filter.no.risk.data.line.month'].create({
                 'name': names,
@@ -137,7 +137,7 @@ class ComputeFundSetting(models.Model):
                 'compute_fund_setting_id': self.id
             })
         elif times == 'week':
-            years, weeks = x.name[0], x.name[2]
+            years, weeks = x.year, x.week
             names = '{years}年第{weeks}周'.format(years=years, weeks=weeks)
             self.env['filter.no.risk.data.line.week'].create({
                 'years': years,
@@ -148,7 +148,7 @@ class ComputeFundSetting(models.Model):
             })
         elif times == 'day':
             self.env['filter.no.risk.data.line.day'].create({
-                'dates': x['dates'],
+                'dates': x['transaction_date'],
                 'interest_rate': rate,
                 'compute_fund_setting_id': self.id
             })
@@ -166,36 +166,30 @@ class ComputeFundSetting(models.Model):
 
     # 无风险数据 time_types:频率
     def get_rf(self, interest_rates, time_types):
-        df = pd.DataFrame(interest_rates, columns=['interest_rate', 'transaction_date'])
-        df['dates'] = pd.to_datetime(df['transaction_date'])
+        df = pd.DataFrame(interest_rates, columns=['transaction_date', 'interest_rate'])
         df['rate'] = pd.to_numeric(df['interest_rate'])
-        calendar = df['dates'].dt
+        df['transaction_date'] = pd.to_datetime(df['transaction_date'])
+        calendar = df['transaction_date'].dt
         df['week'] = calendar.isocalendar().week
         df['month'] = calendar.month
         df['year'] = calendar.year
         df['day'] = calendar.day
-        # 创建RF不同频率的数据(年月周日)
-        time_frequency_list = []
-        for times in ['year', 'month', 'week', 'day']:
-            if times == 'day':
-                time_frequency_list.append('day')
-            elif times == 'week':
-                time_frequency_list.append('week')
-            elif times == 'month':
-                time_frequency_list.append('month')
-            elif times == 'year':
-                time_frequency_list.append('year')
-            else:
-                pass
 
-            data_group = df.groupby(time_frequency_list).max()
-            # 日和周频率取自定义
-            if times == 'day':
-                size = self.year_days
+        # 创建RF不同频率的数据(年月周日)
+        time_frequency_list = [getattr(calendar, 'year')]
+        for times in ['year', 'month', 'week', 'day']:
+            # 时间频率
+            if times == 'month':
+                time_frequency_list.append(getattr(calendar, 'month'))
             elif times == 'week':
-                size = self.year_weeks
-            else:
-                size = data_group.index.size
+                china_calendar = getattr(calendar, 'isocalendar')()
+                time_frequency_list.append(getattr(china_calendar, 'week'))
+            elif times == 'day':
+                time_frequency_list.append(getattr(calendar, 'day'))
+
+            data_group = df.groupby(time_frequency_list).apply(lambda t: t[t.transaction_date==t.transaction_date.max()])
+            # 日和周频率取自定义
+            size = data_group.index.size
             # 创建RF明细
             data_group.apply(self.rf_formula, axis=1, **{'size': size,'times': times})
         return data_group
@@ -282,7 +276,7 @@ class FilterNoRiskDataLineDay(models.Model):
     _name = 'filter.no.risk.data.line.day'
     _description = u'筛选后的无风险收益率明细'
     dates = fields.Date('时间')
-    interest_rate = fields.Float(string='日RF')
+    interest_rate = fields.Float(string='日RF', digits=(16, 4))
     compute_fund_setting_id = fields.Many2one('compute.fund.setting', string='计算模型')
     filter_no_risk_week_id = fields.Many2one('filter.no.risk.data.line.month', string='月')
 
@@ -293,7 +287,7 @@ class FilterNoRiskDataLineWeek(models.Model):
     name = fields.Char('RF名称')
     years = fields.Integer(string='年')
     weeks = fields.Integer(string='周')
-    interest_rate = fields.Float(string='周RF')
+    interest_rate = fields.Float(string='周RF', digits=(16, 4))
     compute_fund_setting_id = fields.Many2one('compute.fund.setting', string='计算模型')
     filter_no_risk_month_id = fields.Many2one('filter.no.risk.data.line.month', string='月')
     filter_no_risk_day_ids = fields.One2many('filter.no.risk.data.line.day', 'filter_no_risk_week_id', string='日')
@@ -306,7 +300,7 @@ class FilterNoRiskDataLineMonth(models.Model):
     years = fields.Integer(string='年')
     months = fields.Integer(string='月')
 
-    interest_rate = fields.Float(string='月RF')
+    interest_rate = fields.Float(string='月RF', digits=(16, 4))
     compute_fund_setting_id = fields.Many2one('compute.fund.setting', string='计算模型')
     filter_no_risk_year_id = fields.Many2one('filter.no.risk.data.line.year', string='年')
     filter_no_risk_week_ids = fields.One2many('filter.no.risk.data.line.week', 'filter_no_risk_month_id', string='周')
@@ -317,7 +311,7 @@ class FilterNoRiskDataLineYear(models.Model):
     _description = u'筛选后的无风险收益率明细'
     name = fields.Char('RF名称')
     years = fields.Integer(string='年')
-    interest_rate = fields.Float(string='年RF')
+    interest_rate = fields.Float(string='年RF', digits=(16, 4))
     filter_no_risk_month_ids = fields.One2many('filter.no.risk.data.line.month', 'filter_no_risk_year_id', string='月')
     compute_fund_setting_id = fields.Many2one('compute.fund.setting', string='计算模型')
 
