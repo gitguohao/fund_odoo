@@ -28,14 +28,16 @@
                         <H1>创建</H1>
                         <group>
                             <group>
-                                <field name="code"/>
-                                <field name="time_types"/>
-                                <field name="beg_date"/>
+                                <field name="code" required="1"/>
+                                <field name="time_types" required="1"/>
+                                <field name="beg_date" required="1"/>
+                                <field name="year_days" required="1"/>
                             </group>
                             <group>
-                                <field name="name"/>
-                                <field name="transaction_date_config_id"/>
-                                <field name="end_date"/>
+                                <field name="name" required="1"/>
+                                <field name="transaction_date_config_id" required="1"/>
+                                <field name="end_date" required="1"/>
+                                <field name="year_weeks" required="1"/>
                             </group>
                         </group>
                     </sheet>
@@ -45,13 +47,51 @@
                         <group>
                             <group>
                                 <field name="no_risk_data_id"/>
-                                <field name="system_no_risk_data_rate" readonly="1"/>
+                                <button string="计算" name="compute_rf" type="object" class="btn-primary"/>
                             </group>
                             <group>
+                                <field name="rf_manual"/>
+                                <field name="rf_time_types"/>
                                 <field name="manual_no_risk_data_rate"/>
                                 <field name="risk_types"/>
                             </group>
+
                         </group>
+                        <H1>无风险收益率明细</H1>
+                        <notebook>
+                            <page string="年" >
+                                <field name="filter_no_risk_data_line_year_ids" readonly="1">
+                                    <tree editable="bottom" delete="0" default_order="name desc">
+                                        <field name="name" />
+                                        <field name="interest_rate" />
+                                    </tree>
+                                </field>
+                            </page>
+                            <page string="月" >
+                                <field name="filter_no_risk_data_line_month_ids" readonly="1">
+                                    <tree editable="bottom" delete="0" default_order="name desc">
+                                        <field name="name" />
+                                        <field name="interest_rate" />
+                                    </tree>
+                                </field>
+                            </page>
+                            <page string="周" >
+                                <field name="filter_no_risk_data_line_week_ids" readonly="1">
+                                    <tree editable="bottom" delete="0" default_order="name desc">
+                                        <field name="name" />
+                                        <field name="interest_rate" />
+                                    </tree>
+                                </field>
+                            </page>
+                            <page string="日" >
+                                <field name="filter_no_risk_data_line_day_ids" readonly="1">
+                                    <tree editable="bottom" delete="0" default_order="dates desc">
+                                        <field name="dates" />
+                                        <field name="interest_rate" />
+                                    </tree>
+                                </field>
+                            </page>
+                        </notebook>
                     </sheet>
 
                     <sheet string="设置基准综合收益率-RM">
