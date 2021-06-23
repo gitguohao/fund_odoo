@@ -7,7 +7,7 @@ from functools import wraps
 _logger = logging.getLogger(__name__)
 
 # 只能包含数字和字母
-regular = '^[0-9a-zA-Z]+$'
+regular = r'[\u4e00-\u9fa5]'
 
 
 def fn_timer(function):

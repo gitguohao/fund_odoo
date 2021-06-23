@@ -39,6 +39,8 @@ class FundBaseData(models.Model):
         if fund_base_data:
             fid = fund_base_data.id
             for date, value in df.items():
+                if value == 'NaN':
+                    continue
                 fund_base_day_net = self.env[model_name].search([
                     ('fund_base_data_id', '=', fid), ('dates', '=', date)
                 ])

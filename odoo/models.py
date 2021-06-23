@@ -3511,8 +3511,9 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
         import re
         from odoo.exceptions import UserError
         from odoo import _
-        r = re.match(regular, value)
-        if r == None:
+        # r = re.match(regular, value)
+        r = re.findall(regular, value)
+        if r:
             raise UserError(_(tips))
 
 
