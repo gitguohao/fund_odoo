@@ -15,7 +15,8 @@ class Wizard(models.TransientModel):
 
     def action_import_create(self):
         action_types = self._context.get('types', '')
-
+        if not self.binary_data:
+            raise UserError(_('请选择文件!'))
         if action_types == 'fund_title':
             notes = self.env['fund.base.data'].import_fund_title_data(self.binary_data)
         elif action_types == 'fund_base_data':

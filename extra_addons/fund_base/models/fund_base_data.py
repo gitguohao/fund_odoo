@@ -39,7 +39,7 @@ class FundBaseData(models.Model):
         if fund_base_data:
             fid = fund_base_data.id
             for date, value in df.items():
-                if value == 'NaN':
+                if pd.isnull(value):
                     continue
                 fund_base_day_net = self.env[model_name].search([
                     ('fund_base_data_id', '=', fid), ('dates', '=', date)
@@ -62,9 +62,9 @@ class FundBaseData(models.Model):
         df = df_dicts.get(sheets[0])
         model_name = types.model_id.model
         filed_name = types.field_name.name
-        total_rows = df.shape[0]
+        total_rows = df.shape[0] * df.shape[1]
         success_rows = df.apply(self.create_data, model_name=model_name, filed_name=filed_name, axis=0)
-        success_rows = max([success_row for success_row in success_rows.values])
+        success_rows = sum([success_row for success_row in success_rows.values])
         notes = '共导入{total_rows}条数据,成功导入{success_rows}条,失败{fail_rows}'.format(total_rows=total_rows, success_rows=success_rows, fail_rows=(total_rows - success_rows))
         return notes
 
