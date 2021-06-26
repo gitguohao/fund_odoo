@@ -4,9 +4,12 @@ import pandas as pd
 from odoo import models, fields, api
 from datetime import date, timedelta
 from extra_addons.tools import regular
+from dateutil.relativedelta import relativedelta
+from decimal import *
 
 n = 4
-
+# 计算器保留位I
+ipone_counter = 8
 
 class ComputeFundSetting(models.Model):
     _name = "compute.fund.setting"
@@ -20,7 +23,6 @@ class ComputeFundSetting(models.Model):
     last_compute_indicators_datetime = fields.Datetime(string='最新指标计算时间')
     no_risk_data_id = fields.Many2one('no.risk.data', string='选择标的', ondelete='restrict')
     system_no_risk_data_rate = fields.Float(string='系统计算RF结果', digits=(16, 4))
-    manual_no_risk_data_rate = fields.Float(string='手动计算RF结果', digits=(16, 4), store=True)
     risk_types = fields.Selection([('system', '系统'), ('manual', '手动')], default='system', string='选择系统/手动的RF结果')
     rm_setting_ids = fields.One2many('rm.setting', 'compute_fund_setting_id', string='选择标的', ondelete='cascade')
     rm_rate = fields.Float(string='基准综合收益率', digits=(16, 4))
@@ -30,12 +32,15 @@ class ComputeFundSetting(models.Model):
     filter_fund_base_data_ids = fields.One2many('filter.fund.base.data', 'compute_fund_setting_id', string='筛选后数据')
     year_days = fields.Integer(string='年化交易日数')
     year_weeks = fields.Integer(string='年化交易周数')
-    rf_time_types = fields.Selection([('day', '天'), ('week', '周'), ('month', '月')], string='自定义RF频率')
-    rf_manual = fields.Float(string='自定义RF', digits=(16, 4))
     filter_no_risk_data_line_year_ids = fields.One2many('filter.no.risk.data.line.year', 'compute_fund_setting_id', string='筛选后数据')
     filter_no_risk_data_line_month_ids = fields.One2many('filter.no.risk.data.line.month', 'compute_fund_setting_id', string='筛选后数据')
     filter_no_risk_data_line_week_ids = fields.One2many('filter.no.risk.data.line.week', 'compute_fund_setting_id', string='筛选后数据')
     filter_no_risk_data_line_day_ids = fields.One2many('filter.no.risk.data.line.day', 'compute_fund_setting_id', string='筛选后数据')
+    manual_rf_ids = fields.One2many('manual.rf', 'compute_fund_setting_id', string='筛选后数据')
+    rf_manual_year = fields.Float(string='自定义RF频率-年', digits=(16, 4))
+    rf_manual_month = fields.Float(string='自定义RF频率-月', digits=(16, 4))
+    rf_manual_week = fields.Float(string='自定义RF频率-周', digits=(16, 4))
+    rf_manual_day = fields.Float(string='自定义RF频率-日', digits=(16, 4))
 
     _sql_constraints = [
         ('unique_code', 'unique (code)', '编码必须唯一!')
@@ -43,7 +48,6 @@ class ComputeFundSetting(models.Model):
 
     @api.depends('rf_manual', 'rf_time_types', 'year_days', 'year_weeks')
     def compute_manual_no_risk_data_rate(self):
-        # if self.
         self.manual_no_risk_data_rate = self.rf_manual
 
     def filter_workflow(self, data):
@@ -115,10 +119,25 @@ class ComputeFundSetting(models.Model):
                     })
 
     def rf_formula(self, x, size, times):
-        a = (1 / size) * x['rate']
+        a = x['rate']
         rate = math.floor(a * 10 ** n) / (10 ** n)
+        years, months, weeks, dates = 0, 0, 0, ''
+        if isinstance(x.name, int):
+            years = x.name
+        if isinstance(x.name, tuple):
+            if len(x.name) == 2:
+                years = x.name[0]
+                months = x.name[1]
+            elif len(x.name) == 3:
+                years = x.name[0]
+                months = x.name[1]
+                weeks = x.name[2]
+            elif len(x.name) == 4:
+                years = x.name[0]
+                months = x.name[1]
+                days = x.name[3]
+                dates = date.today().replace(years, months, days)
         if times == 'year':
-            years = x.year
             names = '{years}年'.format(years=years)
             self.env['filter.no.risk.data.line.year'].create({
                 'name': names,
@@ -127,7 +146,6 @@ class ComputeFundSetting(models.Model):
                 'compute_fund_setting_id': self.id
             })
         elif times == 'month':
-            years, months = x.year, x.month
             names = '{years}年{months}月'.format(years=years, months=months)
             self.env['filter.no.risk.data.line.month'].create({
                 'name': names,
@@ -137,7 +155,6 @@ class ComputeFundSetting(models.Model):
                 'compute_fund_setting_id': self.id
             })
         elif times == 'week':
-            years, weeks = x.year, x.week
             names = '{years}年第{weeks}周'.format(years=years, weeks=weeks)
             self.env['filter.no.risk.data.line.week'].create({
                 'years': years,
@@ -148,7 +165,7 @@ class ComputeFundSetting(models.Model):
             })
         elif times == 'day':
             self.env['filter.no.risk.data.line.day'].create({
-                'dates': x['transaction_date'],
+                'dates': dates,
                 'interest_rate': rate,
                 'compute_fund_setting_id': self.id
             })
@@ -159,25 +176,49 @@ class ComputeFundSetting(models.Model):
         self._cr.execute('delete from filter_no_risk_data_line_month where compute_fund_setting_id={compute_fund_setting_id}'.format(compute_fund_setting_id=self.id))
         self._cr.execute('delete from filter_no_risk_data_line_week where compute_fund_setting_id={compute_fund_setting_id}'.format(compute_fund_setting_id=self.id))
         self._cr.execute('delete from filter_no_risk_data_line_day where compute_fund_setting_id={compute_fund_setting_id}'.format(compute_fund_setting_id=self.id))
-        interest_rates = self.no_risk_data_id.get_no_risk_data_interest_rate(
-            self.beg_date - timedelta(days=1), self.end_date, self.transaction_date_config_id)
-        if interest_rates:
-            rfs = self.get_rf(interest_rates, self.time_types)
+        self.write({'rf_manual_year': 0, 'rf_manual_month': 0, 'rf_manual_week': 0, 'rf_manual_day': 0})
+        if self.risk_types == 'system':
+            interest_rates = self.no_risk_data_id.get_no_risk_data_interest_rate(
+                self.beg_date - timedelta(days=1), self.end_date, self.transaction_date_config_id)
+            if interest_rates:
+                self.get_rf_system(interest_rates)
+        elif self.risk_types == 'manual':
+            self.get_rf_manual()
 
-    # 无风险数据 time_types:频率
-    def get_rf(self, interest_rates, time_types):
+    # 自定义RF无风险数据 time_types:频率
+    def get_rf_manual(self):
+        rf_manual_year = 0
+        for rf in self.manual_rf_ids:
+            beg_date = rf.beg_date
+            end_date = rf.end_date
+            days = (end_date - beg_date).days + 1
+            rf_manual_year += round(Decimal(days) / 365 * Decimal(rf.interest_rate), ipone_counter)
+        rf_manual_month = rf_manual_year / 12
+        rf_manual_week = rf_manual_year / 52
+        rf_manual_day = rf_manual_year / 365
+        self.write({
+            'rf_manual_year': rf_manual_year,
+            'rf_manual_month': rf_manual_month,
+            'rf_manual_week': rf_manual_week,
+            'rf_manual_day': rf_manual_day
+        })
+
+    # 标的RF无风险数据 time_types:频率
+    def get_rf_system(self, interest_rates):
         df = pd.DataFrame(interest_rates, columns=['transaction_date', 'interest_rate'])
         df['rate'] = pd.to_numeric(df['interest_rate'])
         df['transaction_date'] = pd.to_datetime(df['transaction_date'])
         calendar = df['transaction_date'].dt
-        df['week'] = calendar.isocalendar().week
-        df['month'] = calendar.month
-        df['year'] = calendar.year
-        df['day'] = calendar.day
-
+        # df['week'] = calendar.isocalendar().week
+        # df['month'] = calendar.month
+        # df['year'] = calendar.year
+        # df['day'] = calendar.day
+        # 时间维度
+        times_types = ['year', 'month', 'week', 'day']
         # 创建RF不同频率的数据(年月周日)
         time_frequency_list = [getattr(calendar, 'year')]
-        for times in ['year', 'month', 'week', 'day']:
+
+        for times in times_types:
             # 时间频率
             if times == 'month':
                 time_frequency_list.append(getattr(calendar, 'month'))
@@ -186,13 +227,19 @@ class ComputeFundSetting(models.Model):
                 time_frequency_list.append(getattr(china_calendar, 'week'))
             elif times == 'day':
                 time_frequency_list.append(getattr(calendar, 'day'))
+            if self.beg_date + relativedelta(years=1) >= self.end_date and times == 'year':
+                # 时间区间不到一年不算年
+                continue
 
-            data_group = df.groupby(time_frequency_list).apply(lambda t: t[t.transaction_date==t.transaction_date.max()])
-            # 日和周频率取自定义
-            size = data_group.index.size
+            elif self.beg_date + relativedelta(months=1) >= self.end_date and times == 'month':
+                # 时间区间不到一月不算月
+                continue
+            data_group = df.groupby(time_frequency_list).mean()
+
+            # 分组后的频率
+            size = 0
             # 创建RF明细
-            data_group.apply(self.rf_formula, axis=1, **{'size': size,'times': times})
-        return data_group
+            data_group.apply(self.rf_formula, **{'size': size, 'times': times}, axis=1)
 
     # 基准综合收益率 time_types:频率
     def get_rm(self, market_situation_items, time_types):
@@ -313,6 +360,16 @@ class FilterNoRiskDataLineYear(models.Model):
     years = fields.Integer(string='年')
     interest_rate = fields.Float(string='年RF', digits=(16, 4))
     filter_no_risk_month_ids = fields.One2many('filter.no.risk.data.line.month', 'filter_no_risk_year_id', string='月')
+    compute_fund_setting_id = fields.Many2one('compute.fund.setting', string='计算模型')
+
+
+class manualRf(models.Model):
+    _name = 'manual.rf'
+    _description = u'自定义RF'
+    interest_rate = fields.Float('RF值(%)', digits=(16, 4))
+    beg_date = fields.Date('开始时间')
+    end_date = fields.Date(string='结束时间')
+    remain = fields.Char(string='备注')
     compute_fund_setting_id = fields.Many2one('compute.fund.setting', string='计算模型')
 
 

@@ -20,3 +20,4 @@ access_filter_no_risk_data_line_year,filter.no.risk.data.line.year,model_filter_
 access_filter_no_risk_data_line_month,filter.no.risk.data.line.month,model_filter_no_risk_data_line_month,fund_base.fund_manager_group,1,1,1,1
 access_filter_no_risk_data_line_week,filter.no.risk.data.line.week,model_filter_no_risk_data_line_week,fund_base.fund_manager_group,1,1,1,1
 access_filter_no_risk_data_line_day,filter.no.risk.data.line.day,model_filter_no_risk_data_line_day,fund_base.fund_manager_group,1,1,1,1
+access_manual_rf,manual.rf,model_manual_rf,fund_base.fund_manager_group,1,1,1,1
