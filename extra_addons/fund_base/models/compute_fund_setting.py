@@ -1,10 +1,11 @@
 # coding: utf-8
 import math
 import pandas as pd
-from odoo import models, fields, api
+from odoo import models, fields, api, _
 from datetime import date, timedelta
 from extra_addons.tools import regular
 from dateutil.relativedelta import relativedelta
+from odoo.exceptions import UserError
 from decimal import *
 
 n = 4
@@ -45,10 +46,6 @@ class ComputeFundSetting(models.Model):
     _sql_constraints = [
         ('unique_code', 'unique (code)', '编码必须唯一!')
     ]
-
-    @api.depends('rf_manual', 'rf_time_types', 'year_days', 'year_weeks')
-    def compute_manual_no_risk_data_rate(self):
-        self.manual_no_risk_data_rate = self.rf_manual
 
     def filter_workflow(self, data):
         data_ratio = (data['total_net'] != 0).sum() / data.shape[0]
@@ -188,11 +185,20 @@ class ComputeFundSetting(models.Model):
     # 自定义RF无风险数据 time_types:频率
     def get_rf_manual(self):
         rf_manual_year = 0
-        for rf in self.manual_rf_ids:
+        for c, rf in enumerate(self.manual_rf_ids):
             beg_date = rf.beg_date
+            if c != 0:
+                # 自定义RF无风险数据，不能有日期隔断
+                if self.manual_rf_ids[c-1].end_date != (beg_date - timedelta(days=1)):
+                    raise UserError(_('自定义RF无风险数据，不能有日期隔断!'))
+            else:
+                if beg_date != beg_date + relativedelta(month=1, day=1):
+                    raise UserError(_('自定义RF无风险数据，开始日期必须是1月1日!'))
+
             end_date = rf.end_date
             days = (end_date - beg_date).days + 1
             rf_manual_year += round(Decimal(days) / 365 * Decimal(rf.interest_rate), ipone_counter)
+
         rf_manual_month = rf_manual_year / 12
         rf_manual_week = rf_manual_year / 52
         rf_manual_day = rf_manual_year / 365
@@ -209,10 +215,6 @@ class ComputeFundSetting(models.Model):
         df['rate'] = pd.to_numeric(df['interest_rate'])
         df['transaction_date'] = pd.to_datetime(df['transaction_date'])
         calendar = df['transaction_date'].dt
-        # df['week'] = calendar.isocalendar().week
-        # df['month'] = calendar.month
-        # df['year'] = calendar.year
-        # df['day'] = calendar.day
         # 时间维度
         times_types = ['year', 'month', 'week', 'day']
         # 创建RF不同频率的数据(年月周日)
@@ -261,19 +263,6 @@ class ComputeFundSetting(models.Model):
         # RM单个标的收益
         rm_profit = (c / b) - 1
         return rm_profit
-
-    # 系统计算RF结果/系统计算无风险收益率计算
-    # @api.onchange('no_risk_data_id', 'beg_date', 'end_date', 'time_types')
-    # def onchange_interest_rates(self):
-    #     system_no_risk_data_rate = 0
-    #     if self.no_risk_data_id and self.beg_date and self.end_date and self.time_types:
-    #         interest_rates = self.no_risk_data_id.get_no_risk_data_interest_rate(self.beg_date - timedelta(days=1), self.end_date, self.transaction_date_config_id)
-    #         rates_sum = 0
-    #         if interest_rates:
-    #             rfs = self.get_rf(interest_rates, self.time_types)
-    #             rates_sum = rfs['formula_value'].sum()
-    #         system_no_risk_data_rate = math.floor(rates_sum * 10 ** n) / (10 ** n)
-    #     self.system_no_risk_data_rate = system_no_risk_data_rate
 
     @api.onchange('rm_setting_ids', 'beg_date', 'end_date', 'time_types')
     def onchange_rm_rate(self):
@@ -346,7 +335,6 @@ class FilterNoRiskDataLineMonth(models.Model):
     name = fields.Char('RF名称')
     years = fields.Integer(string='年')
     months = fields.Integer(string='月')
-
     interest_rate = fields.Float(string='月RF', digits=(16, 4))
     compute_fund_setting_id = fields.Many2one('compute.fund.setting', string='计算模型')
     filter_no_risk_year_id = fields.Many2one('filter.no.risk.data.line.year', string='年')

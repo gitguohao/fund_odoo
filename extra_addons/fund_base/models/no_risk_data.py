@@ -19,7 +19,7 @@ class NoRiskData(models.Model):
     _sql_constraints = [
         ('unique_code', 'unique (code)', '编码必须唯一!')
     ]
-    # @fn_timer
+
     def get_no_risk_data_interest_rate(self, b_date, e_date, transaction_date_config_id):
         transaction_dates = transaction_date_config_id.get_transaction_dates(b_date, e_date)
         interest_rates = self.env['no.risk.data.line'].search_read([
