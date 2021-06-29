@@ -80,7 +80,7 @@ class MarketSituation(models.Model):
         transaction_dates = transaction_date_config_id.get_transaction_dates(b_date, e_date)
         datas = self.env['market.day.situation'].search_read([
             ('dates', 'in', transaction_dates),
-        ], ['dates', 'close_quoation'])
+        ], ['dates', 'close_quoation', 'interest_rate'])
         return datas
 
 

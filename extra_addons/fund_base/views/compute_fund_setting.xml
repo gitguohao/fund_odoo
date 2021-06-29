@@ -124,6 +124,38 @@
                                 </field>
                                 <field name="rm_rate" readonly="0"/>
                             </page>
+                            <page string="年">
+                                    <field name="filter_rm_year_ids" readonly="1">
+                                        <tree editable="bottom" delete="0" >
+                                            <field name="name"/>
+                                            <field name="rate"/>
+                                        </tree>
+                                    </field>
+                                </page>
+                                <page string="月">
+                                    <field name="filter_rm_month_ids" readonly="1">
+                                        <tree editable="bottom" delete="0">
+                                            <field name="name"/>
+                                            <field name="rate"/>
+                                        </tree>
+                                    </field>
+                                </page>
+                                <page string="周">
+                                    <field name="filter_rm_week_ids" readonly="1">
+                                        <tree editable="bottom" delete="0">
+                                            <field name="name"/>
+                                            <field name="rate"/>
+                                        </tree>
+                                    </field>
+                                </page>
+                                <page string="日">
+                                    <field name="filter_rm_day_ids" readonly="1">
+                                        <tree editable="bottom" delete="0" default_order="dates desc">
+                                            <field name="dates"/>
+                                            <field name="rate"/>
+                                        </tree>
+                                    </field>
+                                </page>
                         </notebook>
                     </sheet>
 

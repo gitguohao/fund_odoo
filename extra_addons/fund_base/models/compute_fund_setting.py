@@ -42,6 +42,10 @@ class ComputeFundSetting(models.Model):
     rf_manual_month = fields.Float(string='自定义RF频率-月', digits=(16, 4))
     rf_manual_week = fields.Float(string='自定义RF频率-周', digits=(16, 4))
     rf_manual_day = fields.Float(string='自定义RF频率-日', digits=(16, 4))
+    filter_rm_year_ids = fields.One2many('filter.rm.year', 'compute_fund_setting_id', string='筛选后数据')
+    filter_rm_month_ids = fields.One2many('filter.rm.month', 'compute_fund_setting_id', string='筛选后数据')
+    filter_rm_week_ids = fields.One2many('filter.rm.week', 'compute_fund_setting_id', string='筛选后数据')
+    filter_rm_day_ids = fields.One2many('filter.rm.day', 'compute_fund_setting_id', string='筛选后数据')
 
     _sql_constraints = [
         ('unique_code', 'unique (code)', '编码必须唯一!')
@@ -243,38 +247,70 @@ class ComputeFundSetting(models.Model):
             # 创建RF明细
             data_group.apply(self.rf_formula, **{'size': size, 'times': times}, axis=1)
 
+    @api.multi
+    def compute_rm(self):
+        self._cr.execute(
+            'delete from filter_rm_year where compute_fund_setting_id={compute_fund_setting_id}'.format(
+                compute_fund_setting_id=self.id))
+        self._cr.execute(
+            'delete from filter_rm_month where compute_fund_setting_id={compute_fund_setting_id}'.format(
+                compute_fund_setting_id=self.id))
+        self._cr.execute(
+            'delete from filter_rm_week where compute_fund_setting_id={compute_fund_setting_id}'.format(
+                compute_fund_setting_id=self.id))
+        self._cr.execute(
+            'delete from filter_rm_day where compute_fund_setting_id={compute_fund_setting_id}'.format(
+                compute_fund_setting_id=self.id))
+
+        rm_rate = 0
+        for rm_setting in self.rm_setting_ids:
+            market_situation_items = rm_setting.market_situation_id.get_market_situation(
+                self.beg_date - timedelta(days=1), self.end_date, self.transaction_date_config_id)
+            if market_situation_items:
+                rm_rate += self.get_rm(market_situation_items)
+                # * (rm_setting.ratio * 0.01)
+        # rm_rate = math.floor(rm_rate * 10 ** n) / (10 ** n)
+
     # 基准综合收益率 time_types:频率
     def get_rm(self, market_situation_items, time_types):
-        df = pd.DataFrame(market_situation_items, columns=['close_quoation', 'dates'])
+        df = pd.DataFrame(market_situation_items, columns=['close_quoation', 'dates', 'interest_rate'])
         df['dates'] = pd.to_datetime(df['dates'])
         calendar = df['dates'].dt
-        # 时间频率
-        time_frequency_list = [getattr(calendar, 'year')]
-        if time_types in ['month', 'week', 'day']:
-            time_frequency_list.append(getattr(calendar, 'month'))
-        if time_types in ['month', 'week']:
-            china_calendar = getattr(calendar, 'isocalendar')()
-            time_frequency_list.append(getattr(china_calendar, 'week'))
-        if time_types == 'day':
-            time_frequency_list.append(getattr(calendar, 'day'))
-        data_group = df.groupby(time_frequency_list).max()
-        size = data_group.index.size
-        b, c = data_group.iloc[0]['close_quoation'], data_group.iloc[size - 1]['close_quoation']
-        # RM单个标的收益
-        rm_profit = (c / b) - 1
-        return rm_profit
 
-    @api.onchange('rm_setting_ids', 'beg_date', 'end_date', 'time_types')
-    def onchange_rm_rate(self):
-        rm_rate = 0
-        if self.rm_setting_ids and self.beg_date and self.end_date and self.time_types:
-            rm_rate = 0
-            for rm_setting in self.rm_setting_ids:
-                market_situation_items = rm_setting.market_situation_id.get_market_situation(self.beg_date - timedelta(days=1), self.end_date, self.transaction_date_config_id)
-                if market_situation_items:
-                    rm_rate += self.get_rm(market_situation_items, self.time_types) * (rm_setting.ratio * 0.01)
-            rm_rate = math.floor(rm_rate * 10 ** n) / (10 ** n)
-        self.rm_rate = rm_rate
+        # 时间维度
+        times_types = ['year', 'month', 'week', 'day']
+        # 创建RF不同频率的数据(年月周日)
+        time_frequency_list = [getattr(calendar, 'year')]
+        for times in times_types:
+            # 时间频率
+            if times == 'month':
+                time_frequency_list.append(getattr(calendar, 'month'))
+            elif times == 'week':
+                china_calendar = getattr(calendar, 'isocalendar')()
+                time_frequency_list.append(getattr(china_calendar, 'week'))
+            elif times == 'day':
+                time_frequency_list.append(getattr(calendar, 'day'))
+            data_group = df.groupby(time_frequency_list).max()
+            # 分组后的频率
+            size = 0
+            # 年收益率：是（每年的最后一个交易日收盘价 / 上一年最后一个交易日的收盘价）-1 / 100
+
+        #
+        # # 时间频率
+        # time_frequency_list = [getattr(calendar, 'year')]
+        # if time_types in ['month', 'week', 'day']:
+        #     time_frequency_list.append(getattr(calendar, 'month'))
+        # if time_types in ['month', 'week']:
+        #     china_calendar = getattr(calendar, 'isocalendar')()
+        #     time_frequency_list.append(getattr(china_calendar, 'week'))
+        # if time_types == 'day':
+        #     time_frequency_list.append(getattr(calendar, 'day'))
+        # data_group = df.groupby(time_frequency_list).max()
+        # size = data_group.index.size
+        # b, c = data_group.iloc[0]['close_quoation'], data_group.iloc[size - 1]['close_quoation']
+        # # RM单个标的收益
+        # rm_profit = (c / b) - 1
+        # return rm_profit
 
 
 class RmSetting(models.Model):
@@ -360,4 +396,40 @@ class manualRf(models.Model):
     remain = fields.Char(string='备注')
     compute_fund_setting_id = fields.Many2one('compute.fund.setting', string='计算模型')
 
+
+class FilterRmDay(models.Model):
+    _name = 'filter.rm.day'
+    _description = u'筛选后的大盘行情数据明细'
+    dates = fields.Date('时间')
+    rate = fields.Float(string='日RM', digits=(16, 4))
+    compute_fund_setting_id = fields.Many2one('compute.fund.setting', string='计算模型')
+
+
+class FilterRmWeek(models.Model):
+    _name = 'filter.rm.week'
+    _description = u'筛选后的大盘行情数据明细'
+    name = fields.Char('RM名称')
+    years = fields.Integer(string='年')
+    weeks = fields.Integer(string='周')
+    rate = fields.Float(string='周RM', digits=(16, 4))
+    compute_fund_setting_id = fields.Many2one('compute.fund.setting', string='计算模型')
+
+
+class FilterRmMonth(models.Model):
+    _name = 'filter.rm.month'
+    _description = u'筛选后的大盘行情数据明细'
+    name = fields.Char('RM名称')
+    years = fields.Integer(string='年')
+    months = fields.Integer(string='月')
+    rate = fields.Float(string='月RM', digits=(16, 4))
+    compute_fund_setting_id = fields.Many2one('compute.fund.setting', string='计算模型')
+
+
+class FilterRmYear(models.Model):
+    _name = 'filter.rm.year'
+    _description = u'筛选后的大盘行情数据明细'
+    name = fields.Char('RM名称')
+    years = fields.Integer(string='年')
+    rate = fields.Float(string='年RM', digits=(16, 4))
+    compute_fund_setting_id = fields.Many2one('compute.fund.setting', string='计算模型')
 
