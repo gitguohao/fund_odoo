@@ -40,7 +40,7 @@ class TransactionDateYear(models.Model):
 
     years = fields.Selection(years_selection, '年')
     transaction_date_config_id = fields.Many2one('transaction.date.config', string='交易日配置')
-    transaction_date_ids = fields.One2many('transaction.date', 'transaction_date_year_id',string='交易日配置')
+    transaction_date_ids = fields.One2many('transaction.date', 'transaction_date_year_id', string='交易日配置')
 
     def create_transaction_date(self, kwargs):
         vals = {'dates': ''}

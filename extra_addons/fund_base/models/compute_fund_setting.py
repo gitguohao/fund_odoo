@@ -12,6 +12,7 @@ n = 4
 # 计算器保留位I
 ipone_counter = 8
 
+
 class ComputeFundSetting(models.Model):
     _name = "compute.fund.setting"
     _description = u'计算模型设置'
@@ -50,6 +51,12 @@ class ComputeFundSetting(models.Model):
     _sql_constraints = [
         ('unique_code', 'unique (code)', '编码必须唯一!')
     ]
+
+    def rm_rate(self, x):
+        if pd.isnull(x['rate']) or pd.isnull(x['up_rate']):
+            return None
+        r = (x['rate'] / x['up_rate']) - 1
+        return r
 
     def filter_workflow(self, data):
         data_ratio = (data['total_net'] != 0).sum() / data.shape[0]
@@ -247,6 +254,44 @@ class ComputeFundSetting(models.Model):
             # 创建RF明细
             data_group.apply(self.rf_formula, **{'size': size, 'times': times}, axis=1)
 
+    def rm_datas(self, beg_date, end_date, rm_id, transaction_date_config_id):
+        sql = '''
+        SELECT
+        t.dates
+        ,sum(t.close_quoation) as close_quoation
+        from 
+        (
+        SELECT hql.dates 
+        ,hql.close_quoation as close_quoation
+        from market_day_situation hql
+        where 
+        hql.dates in (
+        SELECT jyr.dates
+        from transaction_date jyr 
+        where 
+        jyr.dates>='{beg_date}' 
+        and jyr.dates <= '{end_date}' 
+        and jyr.is_transaction_selection='y')
+        and hql.market_situation_id = {rm_id}
+        and jyr.transaction_date_config_id={transaction_date_config_id}
+        union All
+        
+        SELECT jyr.dates
+        ,null as close_quoation
+        from transaction_date jyr 
+        where 
+        jyr.dates>='{beg_date}' 
+        and jyr.dates <= '{end_date}' 
+        and jyr.is_transaction_selection='y'
+        and jyr.transaction_date_config_id={transaction_date_config_id}
+        ) t
+        GROUP BY t.dates
+        ORDER BY t.dates 
+        '''.format(beg_date=beg_date, end_date=end_date, rm_ids=rm_id, transaction_date_config_id=transaction_date_config_id)
+        self._cr.execute(sql)
+        rm_data_lst = self._cr.dictfetchall()
+        return rm_data_lst
+
     @api.multi
     def compute_rm(self):
         self._cr.execute(
@@ -262,21 +307,24 @@ class ComputeFundSetting(models.Model):
             'delete from filter_rm_day where compute_fund_setting_id={compute_fund_setting_id}'.format(
                 compute_fund_setting_id=self.id))
 
-        rm_rate = 0
+        concat_df_lst = []
         for rm_setting in self.rm_setting_ids:
-            market_situation_items = rm_setting.market_situation_id.get_market_situation(
-                self.beg_date - timedelta(days=1), self.end_date, self.transaction_date_config_id)
-            if market_situation_items:
-                rm_rate += self.get_rm(market_situation_items)
-                # * (rm_setting.ratio * 0.01)
-        # rm_rate = math.floor(rm_rate * 10 ** n) / (10 ** n)
+            rm = rm_setting.market_situation_id
+            transaction_date_config = rm.transaction_date_config_id
+            rm_data_lst = self.rm_datas(str(self.beg_date - timedelta(days=1)), str(self.end_date), rm.id, transaction_date_config.id)
+            close_quoation_lst = [rm.get('close_quoation') for rm in rm_data_lst]
+            up_close_quoation_lst = close_quoation_lst.insert(0)
+            df = pd.DataFrame(rm_data_lst, columns=['dates', 'close_quoation'])
+            df['dates'] = pd.to_datetime(df['dates'])
+            df['up_close_quoation'] = up_close_quoation_lst
+            df['rate'] = df.apply(self.rm_rate, axis=1)
+            concat_df_lst = concat_df_lst.append(df)
+        concat_df = pd.concat(concat_df_lst)
+        self.get_rm(concat_df)
 
     # 基准综合收益率 time_types:频率
-    def get_rm(self, market_situation_items, time_types):
-        df = pd.DataFrame(market_situation_items, columns=['close_quoation', 'dates', 'interest_rate'])
-        df['dates'] = pd.to_datetime(df['dates'])
+    def get_rm(self, df):
         calendar = df['dates'].dt
-
         # 时间维度
         times_types = ['year', 'month', 'week', 'day']
         # 创建RF不同频率的数据(年月周日)
