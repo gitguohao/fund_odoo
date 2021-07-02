@@ -27,7 +27,6 @@ class ComputeFundSetting(models.Model):
     system_no_risk_data_rate = fields.Float(string='系统计算RF结果', digits=(16, 4))
     risk_types = fields.Selection([('system', '系统'), ('manual', '手动')], default='system', string='选择系统/手动的RF结果')
     rm_setting_ids = fields.One2many('rm.setting', 'compute_fund_setting_id', string='选择标的', ondelete='cascade')
-    rm_rate = fields.Float(string='基准综合收益率', digits=(16, 4))
     fund_base_all = fields.Boolean(string='总览')
     fund_base_year = fields.Boolean(string='近一年')
     market_config_ids = fields.Many2many('market.config', string='选择标的', ondelete='restrict')
@@ -52,10 +51,16 @@ class ComputeFundSetting(models.Model):
         ('unique_code', 'unique (code)', '编码必须唯一!')
     ]
 
-    def rm_rate(self, x):
-        if pd.isnull(x['rate']) or pd.isnull(x['up_rate']):
-            return None
-        r = (x['rate'] / x['up_rate']) - 1
+    def rm_rate(self, x, rm_name):
+        if pd.isnull(x['close_quoation']) or pd.isnull(x['up_close_quoation']):
+            dates = x['dates']
+            notes = '{rm_name},{dates}是交易日，但没有导入收盘价!'.format(rm_name=rm_name, dates=dates)
+            raise UserError(_(notes))
+        # 年收益率：是（每年的最后一个交易日收盘价 / 上一年最后一个交易日的收盘价）-1 / 100
+        if x['up_close_quoation']:
+            r = ((x['close_quoation'] / x['up_close_quoation']) - 1)
+        else:
+            r = 0
         return r
 
     def filter_workflow(self, data):
@@ -178,6 +183,62 @@ class ComputeFundSetting(models.Model):
                 'compute_fund_setting_id': self.id
             })
 
+    def rm_formula(self, x, times):
+        rate = x['rate']
+        if rate:
+            rate = math.floor(rate * 10 ** n) / (10 ** n)
+        else:
+            rate = 0
+        years, months, weeks, dates = 0, 0, 0, ''
+        if isinstance(x.name, int):
+            years = x.name
+        if isinstance(x.name, tuple):
+            if len(x.name) == 2:
+                years = x.name[0]
+                months = x.name[1]
+            elif len(x.name) == 3:
+                years = x.name[0]
+                months = x.name[1]
+                weeks = x.name[2]
+            elif len(x.name) == 4:
+                years = x.name[0]
+                months = x.name[1]
+                days = x.name[3]
+                dates = date.today().replace(years, months, days)
+        if times == 'year':
+            names = '{years}年'.format(years=years)
+            self.env['filter.rm.year'].create({
+                'name': names,
+                'years': years,
+                'rate': rate,
+                'compute_fund_setting_id': self.id
+            })
+        elif times == 'month':
+            names = '{years}年{months}月'.format(years=years, months=months)
+            self.env['filter.rm.month'].create({
+                'name': names,
+                'years': years,
+                'months': months,
+                'rate': rate,
+                'compute_fund_setting_id': self.id
+            })
+        elif times == 'week':
+            names = '{years}年第{weeks}周'.format(years=years, weeks=weeks)
+            sql = '''INSERT INTO "filter_rm_week" ("id", "years", "weeks",  "name", "rate","compute_fund_setting_id")'''
+            self.env['filter.rm.week'].create({
+                'years': years,
+                'weeks': weeks,
+                'name': names,
+                'rate': rate,
+                'compute_fund_setting_id': self.id
+            })
+        elif times == 'day':
+            self.env['filter.rm.day'].create({
+                'dates': dates,
+                'rate': rate,
+                'compute_fund_setting_id': self.id
+            })
+
     @api.multi
     def compute_rf(self):
         self._cr.execute('delete from filter_no_risk_data_line_year where compute_fund_setting_id={compute_fund_setting_id}'.format(compute_fund_setting_id=self.id))
@@ -271,11 +332,10 @@ class ComputeFundSetting(models.Model):
         where 
         jyr.dates>='{beg_date}' 
         and jyr.dates <= '{end_date}' 
-        and jyr.is_transaction_selection='y')
+        and jyr.is_transaction_selection='y'
+        and jyr.transaction_date_config_id={transaction_date_config_id})
         and hql.market_situation_id = {rm_id}
-        and jyr.transaction_date_config_id={transaction_date_config_id}
         union All
-        
         SELECT jyr.dates
         ,null as close_quoation
         from transaction_date jyr 
@@ -287,7 +347,7 @@ class ComputeFundSetting(models.Model):
         ) t
         GROUP BY t.dates
         ORDER BY t.dates 
-        '''.format(beg_date=beg_date, end_date=end_date, rm_ids=rm_id, transaction_date_config_id=transaction_date_config_id)
+        '''.format(beg_date=beg_date, end_date=end_date, rm_id=rm_id, transaction_date_config_id=transaction_date_config_id)
         self._cr.execute(sql)
         rm_data_lst = self._cr.dictfetchall()
         return rm_data_lst
@@ -309,16 +369,17 @@ class ComputeFundSetting(models.Model):
 
         concat_df_lst = []
         for rm_setting in self.rm_setting_ids:
+            rm_name = rm_setting.market_situation_id.name
             rm = rm_setting.market_situation_id
             transaction_date_config = rm.transaction_date_config_id
             rm_data_lst = self.rm_datas(str(self.beg_date - timedelta(days=1)), str(self.end_date), rm.id, transaction_date_config.id)
-            close_quoation_lst = [rm.get('close_quoation') for rm in rm_data_lst]
-            up_close_quoation_lst = close_quoation_lst.insert(0)
+            up_close_quoation_lst = [rm.get('close_quoation') for rm in rm_data_lst]
+            up_close_quoation_lst.insert(0, 0)
             df = pd.DataFrame(rm_data_lst, columns=['dates', 'close_quoation'])
             df['dates'] = pd.to_datetime(df['dates'])
-            df['up_close_quoation'] = up_close_quoation_lst
-            df['rate'] = df.apply(self.rm_rate, axis=1)
-            concat_df_lst = concat_df_lst.append(df)
+            df['up_close_quoation'] = up_close_quoation_lst[:len(up_close_quoation_lst)-1]
+            df['rate'] = df.apply(self.rm_rate, **{'rm_name': rm_name}, axis=1)
+            concat_df_lst.append(df)
         concat_df = pd.concat(concat_df_lst)
         self.get_rm(concat_df)
 
@@ -328,6 +389,15 @@ class ComputeFundSetting(models.Model):
         # 时间维度
         times_types = ['year', 'month', 'week', 'day']
         # 创建RF不同频率的数据(年月周日)
+
+        time_frequencys = [getattr(calendar, 'year'),getattr(calendar, 'month'), getattr(calendar, 'day')]
+        # 多条RM每一天的收益
+        data_group = df.groupby(time_frequencys).sum()
+        data_group['index'] = data_group.index
+        data_group['dates'] = data_group['index'].apply(lambda x: date.today().replace(year=x[0], month=x[1], day=x[2]))
+        data_group['dates'] = pd.to_datetime(data_group['dates'])
+
+        calendar = data_group['dates'].dt
         time_frequency_list = [getattr(calendar, 'year')]
         for times in times_types:
             # 时间频率
@@ -338,27 +408,10 @@ class ComputeFundSetting(models.Model):
                 time_frequency_list.append(getattr(china_calendar, 'week'))
             elif times == 'day':
                 time_frequency_list.append(getattr(calendar, 'day'))
-            data_group = df.groupby(time_frequency_list).max()
-            # 分组后的频率
-            size = 0
-            # 年收益率：是（每年的最后一个交易日收盘价 / 上一年最后一个交易日的收盘价）-1 / 100
 
-        #
-        # # 时间频率
-        # time_frequency_list = [getattr(calendar, 'year')]
-        # if time_types in ['month', 'week', 'day']:
-        #     time_frequency_list.append(getattr(calendar, 'month'))
-        # if time_types in ['month', 'week']:
-        #     china_calendar = getattr(calendar, 'isocalendar')()
-        #     time_frequency_list.append(getattr(china_calendar, 'week'))
-        # if time_types == 'day':
-        #     time_frequency_list.append(getattr(calendar, 'day'))
-        # data_group = df.groupby(time_frequency_list).max()
-        # size = data_group.index.size
-        # b, c = data_group.iloc[0]['close_quoation'], data_group.iloc[size - 1]['close_quoation']
-        # # RM单个标的收益
-        # rm_profit = (c / b) - 1
-        # return rm_profit
+            time_datas = data_group.groupby(time_frequency_list).max()
+            time_datas.apply(self.rm_formula, **{'times': times}, axis=1)
+
 
 
 class RmSetting(models.Model):

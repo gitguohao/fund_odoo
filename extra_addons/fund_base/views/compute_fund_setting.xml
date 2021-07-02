@@ -116,13 +116,13 @@
                         <H1>设置基准综合收益率-RM</H1>
                         <notebook>
                             <page string="设置基准综合收益率-RM">
+                                <button string="计算RM" name="compute_rm" type="object" class="btn-primary"/>
                                 <field name="rm_setting_ids">
                                     <tree string="设置基准综合收益率-RM" editable="bottom">
                                         <field name="market_situation_id"/>
                                         <field name="ratio"/>
                                     </tree>
                                 </field>
-                                <field name="rm_rate" readonly="0"/>
                             </page>
                             <page string="年">
                                     <field name="filter_rm_year_ids" readonly="1">
