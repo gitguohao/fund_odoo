@@ -81,12 +81,9 @@ class ComputeFundSetting(models.Model):
             return False
         return True
 
-    @api.multi
-    def filter(self):
-        self._cr.execute('delete from filter_fund_base_data where compute_fund_setting_id={compute_fund_setting_id}'.format(compute_fund_setting_id=self.id))
-        transaction_dates = self.transaction_date_config_id.get_transaction_dates(self.beg_date, self.end_date)
-        transaction_dates = [str(d) for d in transaction_dates]
-        self._cr.execute("""
+    # 基金数据
+    def filter_fund_datas(self, beg_date, end_date, fund_id, transaction_date_config_id):
+        sql = '''
         SELECT
         fund_base_data_id AS fund_base_data_id,
         dates AS dates,
@@ -95,41 +92,80 @@ class ComputeFundSetting(models.Model):
         unit_net as unit_net,
         total_net AS total_net
         FROM
-            fund_base_day_net 
+        fund_base_day_net 
         WHERE
-            dates in {transaction_dates}
-        """.format(transaction_dates=tuple(transaction_dates)))
-        select_data_lst = self._cr.dictfetchall()
+        dates in (
+        SELECT jyr.dates
+        from transaction_date jyr 
+        where 
+        jyr.dates>='{beg_date}' 
+        and jyr.dates <= '{end_date}' 
+        and jyr.is_transaction_selection='y'
+        and jyr.transaction_date_config_id={transaction_date_config_id}
+        )
+        and fund_base_data_id={fund_id}
+        union All
+        
+        SELECT 
+        jyr.transaction_date_config_id AS fund_base_data_id,
+        jyr.dates AS dates,
+        null AS beg_price,
+        null AS end_price,
+        null as unit_net,
+        null AS total_net
+        from transaction_date jyr 
+        where 
+        jyr.dates>='{beg_date}' 
+        and jyr.dates <= '{end_date}' 
+        and jyr.is_transaction_selection='y'
+        and jyr.transaction_date_config_id={transaction_date_config_id}
+        '''.format(beg_date=beg_date, end_date=end_date, fund_id=fund_id, transaction_date_config_id=transaction_date_config_id)
+        self._cr.execute(sql)
+        data_lst = self._cr.dictfetchall()
+        return data_lst
 
-        df = pd.DataFrame(select_data_lst, columns=['fund_base_data_id', 'dates','beg_price', 'end_price', 'total_net', 'unit_net'])
+    @api.multi
+    def filter(self):
+        self._cr.execute('delete from filter_fund_base_data where compute_fund_setting_id={compute_fund_setting_id}'.format(compute_fund_setting_id=self.id))
+        fund_ids = self.env['fund.base.data'].search([])
+        for fund in fund_ids:
+            select_data_lst = self.filter_fund_datas(str(self.beg_date - timedelta(days=1)), str(self.end_date), fund.id, self.transaction_date_config_id.id)
 
-        df['dates'] = pd.to_datetime(df['dates'])
-        df['total_net'] = pd.to_numeric(df['total_net'])
-        df_groups = df.groupby('fund_base_data_id')
-        for fund_base_data_id, data in df_groups:
-            filter_bool = self.filter_workflow(data)
-            # 总览标准差
-            total_std = data['total_net'].std(ddof=0)
-            if filter_bool:
-                filter_fund_base_data_d = self.env['filter.fund.base.data'].create({
-                    'fund_base_data_id': fund_base_data_id,
-                    'compute_fund_setting_id': self.id,
-                    'total_std': total_std
-                })
-                for n in range(0, data.shape[0]):
-                    dates = data.iloc[n]['dates']
-                    beg_price = data.iloc[n]['beg_price']
-                    end_price = data.iloc[n]['end_price']
-                    unit_net = data.iloc[n]['unit_net']
-                    total_net = data.iloc[n]['total_net']
-                    filter_fund_base_day_net_d = self.env['filter.fund.base.day.net'].create({
-                        'dates': dates,
-                        'beg_price': beg_price,
-                        'end_price': end_price,
-                        'unit_net': unit_net,
-                        'total_net': total_net,
-                        'fund_base_data_id': filter_fund_base_data_d.id
+            df = pd.DataFrame(select_data_lst, columns=['fund_base_data_id', 'dates','beg_price', 'end_price', 'total_net', 'unit_net'])
+
+            df['dates'] = pd.to_datetime(df['dates'])
+            df['total_net'] = pd.to_numeric(df['total_net'])
+            df_groups = df.groupby('fund_base_data_id')
+            for fund_base_data_id, data in df_groups:
+                filter_bool = self.filter_workflow(data)
+                # 总览标准差
+                total_std = data['total_net'].std(ddof=0)
+                if filter_bool:
+                    filter_fund_base_data_d = self.env['filter.fund.base.data'].create({
+                        'fund_base_data_id': fund_base_data_id,
+                        'compute_fund_setting_id': self.id,
+                        'total_std': total_std
                     })
+                    for n in range(0, data.shape[0]):
+                        dates = data.iloc[n]['dates']
+                        beg_price = data.iloc[n]['beg_price']
+                        end_price = data.iloc[n]['end_price']
+                        unit_net = data.iloc[n]['unit_net']
+                        total_net = data.iloc[n]['total_net']
+                        filter_fund_base_day_net_vlas = {
+                            'dates': dates,
+                            'fund_base_data_id': filter_fund_base_data_d.id
+                        }
+                        if not pd.isnull(beg_price):
+                            filter_fund_base_day_net_vlas.update({'beg_price': beg_price})
+                        if not pd.isnull(end_price):
+                            filter_fund_base_day_net_vlas.update({'end_price': end_price})
+                        if not pd.isnull(unit_net):
+                            filter_fund_base_day_net_vlas.update({'unit_net': unit_net})
+                        if not pd.isnull(total_net):
+                            filter_fund_base_day_net_vlas.update({'total_net': total_net})
+
+                        self.env['filter.fund.base.day.net'].create(filter_fund_base_day_net_vlas)
 
     def rf_formula(self, x, size, times):
         a = x['rate']
@@ -224,7 +260,7 @@ class ComputeFundSetting(models.Model):
             })
         elif times == 'week':
             names = '{years}年第{weeks}周'.format(years=years, weeks=weeks)
-            sql = '''INSERT INTO "filter_rm_week" ("id", "years", "weeks",  "name", "rate","compute_fund_setting_id")'''
+            # sql = '''INSERT INTO "filter_rm_week" ("id", "years", "weeks",  "name", "rate","compute_fund_setting_id")'''
             self.env['filter.rm.week'].create({
                 'years': years,
                 'weeks': weeks,
