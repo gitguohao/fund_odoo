@@ -188,19 +188,33 @@
                                                     <field name="total_std" />
                                                     <field name="year_std" />
                                                     <field name="market_std" />
+                                                    <field name="time_types" invisible="1"/>
                                                 </group>
                                                 <group>
 
                                                 </group>
                                             </group>
                                             <notebook>
-                                                <page string="日净值">
+                                                <page string="日净值" attrs="{'invisible':[('time_types','!=','day')]}">
                                                     <field name="filter_fund_base_day_net_ids" >
                                                         <tree editable="bottom">
                                                             <field name="dates" />
-                                                            <field name="beg_price" />
-                                                            <field name="end_price" />
-                                                            <field name="unit_net" />
+                                                            <field name="total_net" />
+                                                        </tree>
+                                                    </field>
+                                                </page>
+                                                <page string="周净值" attrs="{'invisible':[('time_types','!=','week')]}">
+                                                    <field name="filter_fund_base_week_net_ids">
+                                                        <tree editable="bottom">
+                                                            <field name="name" />
+                                                            <field name="total_net" />
+                                                        </tree>
+                                                    </field>
+                                                </page>
+                                                <page string="月净值" attrs="{'invisible':[('time_types','!=','month')]}">
+                                                    <field name="filter_fund_base_month_net_ids">
+                                                        <tree editable="bottom">
+                                                            <field name="name" />
                                                             <field name="total_net" />
                                                         </tree>
                                                     </field>

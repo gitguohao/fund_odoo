@@ -64,26 +64,34 @@ class ComputeFundSetting(models.Model):
         return r
 
     def filter_workflow(self, data):
-        data_ratio = (data['total_net'] != 0).sum() / data.shape[0]
+        data_ratio = (data['total_net']).sum() / data.shape[0]
         # 交易量在90%以下
         if data_ratio < 0.9:
             return False
-        year = data['dates'].dt.year
-        month = data['dates'].dt.month
-        week = data['dates'].dt.isocalendar().week
-        max_year = max(year)
-        max_month = max(month)
-        max_week = max(week)
-        g = data.groupby([year, month, week])
-        # 最后一周是否有数据
-        last_g = g.get_group((max_year, max_month, max_week))
-        if last_g['total_net'].sum() == 0:
-            return False
+        # year = data['dates'].dt.year
+        # month = data['dates'].dt.month
+        # week = data['dates'].dt.isocalendar().week
+        # max_year = max(year)
+        # max_month = max(month)
+        # max_week = max(week)
+        # g = data.groupby([year, month, week])
+        # # 最后一周是否有数据
+        # last_g = g.get_group((max_year, max_month, max_week))
+        # if last_g['total_net'].sum() == 0:
+        #     return False
         return True
 
     # 基金数据
     def filter_fund_datas(self, beg_date, end_date, fund_id, transaction_date_config_id):
         sql = '''
+        SELECT
+            dates AS dates,
+            sum(beg_price) AS beg_price,
+            sum(end_price) AS end_price,
+            sum(unit_net) AS unit_net,
+            sum(total_net) AS total_net 
+        FROM
+            (
         SELECT
         fund_base_data_id AS fund_base_data_id,
         dates AS dates,
@@ -119,161 +127,151 @@ class ComputeFundSetting(models.Model):
         and jyr.dates <= '{end_date}' 
         and jyr.is_transaction_selection='y'
         and jyr.transaction_date_config_id={transaction_date_config_id}
+        ) t
+        group by t.dates
         '''.format(beg_date=beg_date, end_date=end_date, fund_id=fund_id, transaction_date_config_id=transaction_date_config_id)
         self._cr.execute(sql)
         data_lst = self._cr.dictfetchall()
         return data_lst
 
+    def get_create_vlas(slef, df, time_types):
+        keys = df.name
+        years, months, weeks, dates = 0, 0, 0, ''
+        if isinstance(keys, int):
+            years = keys
+        if isinstance(keys, tuple):
+            if len(keys) == 2:
+                years = keys[0]
+            elif len(keys) == 4:
+                years = keys[0]
+                months = keys[1]
+                days = keys[3]
+                dates = date.today().replace(years, months, days)
+        if time_types == 'day':
+            vlas = {
+                'dates': dates,
+            }
+
+        elif time_types == 'week':
+            weeks = keys[1]
+            names = '{years}年第{weeks}周'.format(years=years, weeks=weeks)
+            vlas = {
+                'years': years,
+                'weeks': weeks,
+                'name': names,
+            }
+
+        elif time_types == 'month':
+            months = keys[1]
+            names = '{years}年第{months}月'.format(years=years, months=months)
+            vlas = {
+                'years': years,
+                'months': months,
+                'name': names,
+            }
+        elif time_types == 'year':
+            names = '{years}年'.format(years=years)
+            vlas = {
+                'years': years,
+                'months': months,
+                'name': names,
+            }
+        else:
+            raise UserError(_('未知的数据频率!'))
+        return vlas
+
+    def filter_create(self, x, time_types, filter_fund_id):
+        total_net = x['total_net']
+        vals = self.get_create_vlas(x, time_types)
+        if pd.isnull(total_net):
+            pass
+        else:
+            vals.update({'total_net': total_net})
+        if time_types == 'day':
+            vals.update({'fund_base_data_id': filter_fund_id})
+            self.env['filter.fund.base.day.net'].create(vals)
+        elif time_types == 'week':
+            vals.update({'fund_base_data_id': filter_fund_id})
+            self.env['filter.fund.base.week.net'].create(vals)
+        elif time_types == 'month':
+            vals.update({'fund_base_data_id': filter_fund_id})
+            self.env['filter.fund.base.month.net'].create(vals)
+
     @api.multi
     def filter(self):
         self._cr.execute('delete from filter_fund_base_data where compute_fund_setting_id={compute_fund_setting_id}'.format(compute_fund_setting_id=self.id))
+
         fund_ids = self.env['fund.base.data'].search([])
         for fund in fund_ids:
             select_data_lst = self.filter_fund_datas(str(self.beg_date - timedelta(days=1)), str(self.end_date), fund.id, self.transaction_date_config_id.id)
-
-            df = pd.DataFrame(select_data_lst, columns=['fund_base_data_id', 'dates','beg_price', 'end_price', 'total_net', 'unit_net'])
-
+            df = pd.DataFrame(select_data_lst, columns=['dates', 'total_net'])
             df['dates'] = pd.to_datetime(df['dates'])
             df['total_net'] = pd.to_numeric(df['total_net'])
-            df_groups = df.groupby('fund_base_data_id')
-            for fund_base_data_id, data in df_groups:
-                filter_bool = self.filter_workflow(data)
-                # 总览标准差
-                total_std = data['total_net'].std(ddof=0)
-                if filter_bool:
-                    filter_fund_base_data_d = self.env['filter.fund.base.data'].create({
-                        'fund_base_data_id': fund_base_data_id,
-                        'compute_fund_setting_id': self.id,
-                        'total_std': total_std
-                    })
-                    for n in range(0, data.shape[0]):
-                        dates = data.iloc[n]['dates']
-                        beg_price = data.iloc[n]['beg_price']
-                        end_price = data.iloc[n]['end_price']
-                        unit_net = data.iloc[n]['unit_net']
-                        total_net = data.iloc[n]['total_net']
-                        filter_fund_base_day_net_vlas = {
-                            'dates': dates,
-                            'fund_base_data_id': filter_fund_base_data_d.id
-                        }
-                        if not pd.isnull(beg_price):
-                            filter_fund_base_day_net_vlas.update({'beg_price': beg_price})
-                        if not pd.isnull(end_price):
-                            filter_fund_base_day_net_vlas.update({'end_price': end_price})
-                        if not pd.isnull(unit_net):
-                            filter_fund_base_day_net_vlas.update({'unit_net': unit_net})
-                        if not pd.isnull(total_net):
-                            filter_fund_base_day_net_vlas.update({'total_net': total_net})
-
-                        self.env['filter.fund.base.day.net'].create(filter_fund_base_day_net_vlas)
+            filter_bool = self.filter_workflow(df)
+            if not filter_bool:
+                continue
+            calendar = df['dates'].dt
+            # 时间维度
+            time_types = self.time_types
+            # 创建不同频率的数据(年月周日)
+            time_frequency_list = [getattr(calendar, 'year')]
+            if time_types in ['month', 'day']:
+                time_frequency_list.append(getattr(calendar, 'month'))
+            if time_types in ['week', 'day']:
+                china_calendar = getattr(calendar, 'isocalendar')()
+                time_frequency_list.append(getattr(china_calendar, 'week'))
+            if time_types == 'day':
+                time_frequency_list.append(getattr(calendar, 'day'))
+            df_groups = df.groupby(time_frequency_list).sum()
+            filter_fund_base_data_d = self.env['filter.fund.base.data'].create({
+                'fund_base_data_id': fund.id,
+                'compute_fund_setting_id': self.id,
+            })
+            filter_fund_id= filter_fund_base_data_d.id
+            df_groups.apply(self.filter_create, **{'time_types': time_types, 'filter_fund_id': filter_fund_id}, axis=1)
+        return True
 
     def rf_formula(self, x, size, times):
+        vals = self.get_create_vlas(x, times)
         a = x['rate']
         rate = math.floor(a * 10 ** n) / (10 ** n)
-        years, months, weeks, dates = 0, 0, 0, ''
-        if isinstance(x.name, int):
-            years = x.name
-        if isinstance(x.name, tuple):
-            if len(x.name) == 2:
-                years = x.name[0]
-                months = x.name[1]
-            elif len(x.name) == 3:
-                years = x.name[0]
-                months = x.name[1]
-                weeks = x.name[2]
-            elif len(x.name) == 4:
-                years = x.name[0]
-                months = x.name[1]
-                days = x.name[3]
-                dates = date.today().replace(years, months, days)
+        if pd.isnull(rate):
+            pass
+        else:
+            vals.update({'interest_rate': rate})
         if times == 'year':
-            names = '{years}年'.format(years=years)
-            self.env['filter.no.risk.data.line.year'].create({
-                'name': names,
-                'years': years,
-                'interest_rate': rate,
-                'compute_fund_setting_id': self.id
-            })
+            vals.update({'compute_fund_setting_id': self.id})
+            self.env['filter.no.risk.data.line.year'].create(vals)
         elif times == 'month':
-            names = '{years}年{months}月'.format(years=years, months=months)
-            self.env['filter.no.risk.data.line.month'].create({
-                'name': names,
-                'years': years,
-                'months': months,
-                'interest_rate': rate,
-                'compute_fund_setting_id': self.id
-            })
+            vals.update({'compute_fund_setting_id': self.id})
+            self.env['filter.no.risk.data.line.month'].create(vals)
         elif times == 'week':
-            names = '{years}年第{weeks}周'.format(years=years, weeks=weeks)
-            self.env['filter.no.risk.data.line.week'].create({
-                'years': years,
-                'weeks': weeks,
-                'name': names,
-                'interest_rate': rate,
-                'compute_fund_setting_id': self.id
-            })
+            vals.update({'compute_fund_setting_id': self.id})
+            self.env['filter.no.risk.data.line.week'].create(vals)
         elif times == 'day':
-            self.env['filter.no.risk.data.line.day'].create({
-                'dates': dates,
-                'interest_rate': rate,
-                'compute_fund_setting_id': self.id
-            })
+            vals.update({'compute_fund_setting_id': self.id})
+            self.env['filter.no.risk.data.line.day'].create(vals)
 
     def rm_formula(self, x, times):
+        vals = self.get_create_vlas(x, times)
         rate = x['rate']
-        if rate:
-            rate = math.floor(rate * 10 ** n) / (10 ** n)
+        if pd.isnull(rate):
+            pass
         else:
-            rate = 0
-        years, months, weeks, dates = 0, 0, 0, ''
-        if isinstance(x.name, int):
-            years = x.name
-        if isinstance(x.name, tuple):
-            if len(x.name) == 2:
-                years = x.name[0]
-                months = x.name[1]
-            elif len(x.name) == 3:
-                years = x.name[0]
-                months = x.name[1]
-                weeks = x.name[2]
-            elif len(x.name) == 4:
-                years = x.name[0]
-                months = x.name[1]
-                days = x.name[3]
-                dates = date.today().replace(years, months, days)
+            rate = math.floor(rate * 10 ** n) / (10 ** n)
+            vals.update({'rate': rate})
         if times == 'year':
-            names = '{years}年'.format(years=years)
-            self.env['filter.rm.year'].create({
-                'name': names,
-                'years': years,
-                'rate': rate,
-                'compute_fund_setting_id': self.id
-            })
+            vals.update({'compute_fund_setting_id': self.id})
+            self.env['filter.rm.year'].create(vals)
         elif times == 'month':
-            names = '{years}年{months}月'.format(years=years, months=months)
-            self.env['filter.rm.month'].create({
-                'name': names,
-                'years': years,
-                'months': months,
-                'rate': rate,
-                'compute_fund_setting_id': self.id
-            })
+            vals.update({'compute_fund_setting_id': self.id})
+            self.env['filter.rm.month'].create(vals)
         elif times == 'week':
-            names = '{years}年第{weeks}周'.format(years=years, weeks=weeks)
-            # sql = '''INSERT INTO "filter_rm_week" ("id", "years", "weeks",  "name", "rate","compute_fund_setting_id")'''
-            self.env['filter.rm.week'].create({
-                'years': years,
-                'weeks': weeks,
-                'name': names,
-                'rate': rate,
-                'compute_fund_setting_id': self.id
-            })
+            vals.update({'compute_fund_setting_id': self.id})
+            self.env['filter.rm.week'].create(vals)
         elif times == 'day':
-            self.env['filter.rm.day'].create({
-                'dates': dates,
-                'rate': rate,
-                'compute_fund_setting_id': self.id
-            })
+            vals.update({'compute_fund_setting_id': self.id})
+            self.env['filter.rm.day'].create(vals)
 
     @api.multi
     def compute_rf(self):
@@ -330,7 +328,7 @@ class ComputeFundSetting(models.Model):
 
         for times in times_types:
             # 时间频率
-            if times == 'month':
+            if times == 'month' and times != 'week':
                 time_frequency_list.append(getattr(calendar, 'month'))
             elif times == 'week':
                 china_calendar = getattr(calendar, 'isocalendar')()
@@ -437,7 +435,7 @@ class ComputeFundSetting(models.Model):
         time_frequency_list = [getattr(calendar, 'year')]
         for times in times_types:
             # 时间频率
-            if times == 'month':
+            if times == 'month' and times != 'week':
                 time_frequency_list.append(getattr(calendar, 'month'))
             elif times == 'week':
                 china_calendar = getattr(calendar, 'isocalendar')()
@@ -465,6 +463,9 @@ class FilterFundBaseData(models.Model):
     code = fields.Char(related='fund_base_data_id.code', string='编码')
     compute_fund_setting_id = fields.Many2one('compute.fund.setting', string='计算模型')
     filter_fund_base_day_net_ids = fields.One2many('filter.fund.base.day.net', 'fund_base_data_id', string='日净值')
+    filter_fund_base_week_net_ids = fields.One2many('filter.fund.base.week.net', 'fund_base_data_id', string='日净值')
+    filter_fund_base_month_net_ids = fields.One2many('filter.fund.base.month.net', 'fund_base_data_id', string='日净值')
+    time_types = fields.Selection(related='compute_fund_setting_id.time_types', readonly=True, store=True)
     total_std = fields.Float(string='总览-标准差', digits=(16, 4))
     year_std = fields.Float(string='近一年-标准差', digits=(16, 4))
     market_std = fields.Float(string='熊市-标准差', digits=(16, 4))
@@ -478,7 +479,27 @@ class FilterFundBaseDayNet(models.Model):
     end_price = fields.Float('收盘价', digits=(16, 4))
     unit_net = fields.Float(string='单位净值', digits=(16, 4))
     total_net = fields.Float(string='累计净值', digits=(16, 4))
-    fund_base_data_id = fields.Many2one('filter.fund.base.data', string='基金基础数据', index=True)
+    fund_base_data_id = fields.Many2one('filter.fund.base.data', string='筛选后的日净值', index=True)
+
+
+class FilterFundBaseWeekNet(models.Model):
+    _name = 'filter.fund.base.week.net'
+    _description = u'筛选后的周净值'
+    name = fields.Char('RF名称')
+    years = fields.Integer(string='年')
+    weeks = fields.Integer(string='周')
+    total_net = fields.Float(string='累计净值', digits=(16, 4))
+    fund_base_data_id = fields.Many2one('filter.fund.base.data', string='筛选后的周净值', index=True)
+
+
+class FilterFundBaseMonthNet(models.Model):
+    _name = 'filter.fund.base.month.net'
+    _description = u'筛选后的月净值'
+    name = fields.Char('RF名称')
+    years = fields.Integer(string='年')
+    months = fields.Integer(string='月')
+    total_net = fields.Float(string='累计净值', digits=(16, 4))
+    fund_base_data_id = fields.Many2one('filter.fund.base.data', string='筛选后的月净值', index=True)
 
 
 class FilterNoRiskDataLineDay(models.Model):

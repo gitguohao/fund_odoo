@@ -14,6 +14,8 @@ access_compute_fund_setting,compute.fund.setting,model_compute_fund_setting,fund
 access_rm_setting,rm.setting,model_rm_setting,fund_base.fund_manager_group,1,1,1,1
 access_filter_fund_base_data,filter.fund.base.data,model_filter_fund_base_data,fund_base.fund_manager_group,1,1,1,1
 access_filter_fund_base_day_net,filter.fund.base.day.net,model_filter_fund_base_day_net,fund_base.fund_manager_group,1,1,1,1
+access_filter_fund_base_month_net,filter.fund.base.month.net,model_filter_fund_base_month_net,fund_base.fund_manager_group,1,1,1,1
+access_filter_fund_base_week_net,filter.fund.base.week.net,model_filter_fund_base_week_net,fund_base.fund_manager_group,1,1,1,1
 access_import_data_config,import.data.config,model_import_data_config,base.group_system,1,1,1,1
 access_import_data_config_read,import.data.config,model_import_data_config,fund_base.fund_manager_group,1,0,0,0
 access_filter_no_risk_data_line_year,filter.no.risk.data.line.year,model_filter_no_risk_data_line_year,fund_base.fund_manager_group,1,1,1,1
