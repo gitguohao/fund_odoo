@@ -8,8 +8,8 @@
     'version': '12.0.1',
     'depends': ['base', 'fund_wizard'],
     'data': [
-        'security/ir.model.access.csv',
         'views/security.xml',
+        'security/ir.model.access.csv',
         'views/fund_base_wizard.xml',
         'views/no_risk_data.xml',
         'views/market_situation.xml',
