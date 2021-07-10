@@ -47,14 +47,14 @@
                         <group>
                             <group>
                               <field name="risk_types" required="1"/>
-                                <field name="no_risk_data_id"/>
+                                <field name="no_risk_data_id" attrs="{'invisible':[('risk_types','!=','system')]}"/>
                               </group>
                               <group>
                                   <button string="计算" name="compute_rf" type="object" class="btn-primary"/>
                             </group>
                         </group>
                         <H1>无风险收益率明细</H1>
-                            <notebook>
+                            <notebook attrs="{'invisible':[('risk_types','!=','system')]}">
                                 <page string="年">
                                     <field name="filter_no_risk_data_line_year_ids" readonly="1">
                                         <tree editable="bottom" delete="0" >
@@ -88,7 +88,7 @@
                                     </field>
                                 </page>
                             </notebook>
-                            <notebook>
+                            <notebook attrs="{'invisible':[('risk_types','!=','manual')]}">
                                 <page string="自定义rf">
                                     <field name="manual_rf_ids">
                                         <tree editable="bottom">
@@ -102,10 +102,10 @@
                             </notebook>
                         <group>
                             <group>
-                                <field name="rf_manual_year" required="1"/>
-                                <field name="rf_manual_month" required="1"/>
-                                <field name="rf_manual_week" required="1"/>
-                                <field name="rf_manual_day" required="1"/>
+                                <field name="rf_manual_year" readonly="1" attrs="{'invisible':[('risk_types','!=','manual')]}"/>
+                                <field name="rf_manual_month" readonly="1" attrs="{'invisible':[('risk_types','!=','manual')]}"/>
+                                <field name="rf_manual_week" readonly="1" attrs="{'invisible':[('risk_types','!=','manual')]}"/>
+                                <field name="rf_manual_day" readonly="1" attrs="{'invisible':[('risk_types','!=','manual')]}"/>
                             </group>
                             <group>
                             </group>

@@ -136,7 +136,7 @@ class ComputeFundSetting(models.Model):
 
     def get_create_vlas(slef, df, time_types):
         keys = df.name
-        years, months, weeks, dates = 0, 0, 0, ''
+        years, months, weeks, dates = 0, 0, 0, False
         if isinstance(keys, int):
             years = keys
         if isinstance(keys, tuple):
@@ -233,11 +233,12 @@ class ComputeFundSetting(models.Model):
 
     def rf_formula(self, x, size, times):
         vals = self.get_create_vlas(x, times)
-        a = x['rate']
-        rate = math.floor(a * 10 ** n) / (10 ** n)
+        rate = x['rate']
+
         if pd.isnull(rate):
             pass
         else:
+            rate = math.floor(rate * 10 ** n) / (10 ** n)
             vals.update({'interest_rate': rate})
         if times == 'year':
             vals.update({'compute_fund_setting_id': self.id})
@@ -281,10 +282,10 @@ class ComputeFundSetting(models.Model):
         self._cr.execute('delete from filter_no_risk_data_line_day where compute_fund_setting_id={compute_fund_setting_id}'.format(compute_fund_setting_id=self.id))
         self.write({'rf_manual_year': 0, 'rf_manual_month': 0, 'rf_manual_week': 0, 'rf_manual_day': 0})
         if self.risk_types == 'system':
-            interest_rates = self.no_risk_data_id.get_no_risk_data_interest_rate(
-                self.beg_date - timedelta(days=1), self.end_date, self.transaction_date_config_id)
-            if interest_rates:
-                self.get_rf_system(interest_rates)
+            beg_date = self.beg_date - timedelta(days=1)
+            datas = self.rf_datas(beg_date, self.end_date, self.no_risk_data_id.id, self.transaction_date_config_id.id)
+            if datas:
+                self.get_rf_system(datas)
         elif self.risk_types == 'manual':
             self.get_rf_manual()
 
@@ -317,23 +318,22 @@ class ComputeFundSetting(models.Model):
 
     # 标的RF无风险数据 time_types:频率
     def get_rf_system(self, interest_rates):
-        df = pd.DataFrame(interest_rates, columns=['transaction_date', 'interest_rate'])
-        df['rate'] = pd.to_numeric(df['interest_rate'])
-        df['transaction_date'] = pd.to_datetime(df['transaction_date'])
-        calendar = df['transaction_date'].dt
+        df = pd.DataFrame(interest_rates, columns=['dates', 'rate'])
+        df['rate'] = pd.to_numeric(df['rate'])
+        df['dates'] = pd.to_datetime(df['dates'])
+        calendar = df['dates'].dt
         # 时间维度
         times_types = ['year', 'month', 'week', 'day']
         # 创建RF不同频率的数据(年月周日)
-        time_frequency_list = [getattr(calendar, 'year')]
-
         for times in times_types:
+            time_frequency_list = [getattr(calendar, 'year')]
             # 时间频率
-            if times == 'month' and times != 'week':
+            if times in ['month', 'day'] and times != 'week':
                 time_frequency_list.append(getattr(calendar, 'month'))
-            elif times == 'week':
+            if times in ['week', 'day']:
                 china_calendar = getattr(calendar, 'isocalendar')()
                 time_frequency_list.append(getattr(china_calendar, 'week'))
-            elif times == 'day':
+            if times == 'day':
                 time_frequency_list.append(getattr(calendar, 'day'))
             if self.beg_date + relativedelta(years=1) >= self.end_date and times == 'year':
                 # 时间区间不到一年不算年
@@ -348,6 +348,43 @@ class ComputeFundSetting(models.Model):
             size = 0
             # 创建RF明细
             data_group.apply(self.rf_formula, **{'size': size, 'times': times}, axis=1)
+
+    def rf_datas(self, beg_date, end_date, rf_id, transaction_date_config_id):
+        sql = '''
+        SELECT
+        t.dates
+        ,sum(t.rate) as rate
+        from 
+        (
+        SELECT r.transaction_date  as dates
+        ,r.interest_rate  as rate
+        from no_risk_data_line r
+        where 
+        r.transaction_date in (
+        SELECT jyr.dates
+        from transaction_date jyr 
+        where 
+        jyr.dates>='{beg_date}' 
+        and jyr.dates <= '{end_date}' 
+        and jyr.is_transaction_selection='y'
+        and jyr.transaction_date_config_id={transaction_date_config_id})
+        and r.no_risk_data_id = {rf_id}
+        union All
+        SELECT jyr.dates
+        ,null as close_quoation
+        from transaction_date jyr 
+        where 
+        jyr.dates>='{beg_date}' 
+        and jyr.dates <= '{end_date}' 
+        and jyr.is_transaction_selection='y'
+        and jyr.transaction_date_config_id={transaction_date_config_id}
+        ) t
+        GROUP BY t.dates
+        ORDER BY t.dates 
+        '''.format(beg_date=beg_date, end_date=end_date, rf_id=rf_id, transaction_date_config_id=transaction_date_config_id)
+        self._cr.execute(sql)
+        data_lst = self._cr.dictfetchall()
+        return data_lst
 
     def rm_datas(self, beg_date, end_date, rm_id, transaction_date_config_id):
         sql = '''
@@ -400,13 +437,13 @@ class ComputeFundSetting(models.Model):
         self._cr.execute(
             'delete from filter_rm_day where compute_fund_setting_id={compute_fund_setting_id}'.format(
                 compute_fund_setting_id=self.id))
+        transaction_date_config_id = self.transaction_date_config_id.id
 
         concat_df_lst = []
         for rm_setting in self.rm_setting_ids:
             rm_name = rm_setting.market_situation_id.name
             rm = rm_setting.market_situation_id
-            transaction_date_config = rm.transaction_date_config_id
-            rm_data_lst = self.rm_datas(str(self.beg_date - timedelta(days=1)), str(self.end_date), rm.id, transaction_date_config.id)
+            rm_data_lst = self.rm_datas(str(self.beg_date - timedelta(days=1)), str(self.end_date), rm.id, transaction_date_config_id)
             up_close_quoation_lst = [rm.get('close_quoation') for rm in rm_data_lst]
             up_close_quoation_lst.insert(0, 0)
             df = pd.DataFrame(rm_data_lst, columns=['dates', 'close_quoation'])
@@ -432,20 +469,19 @@ class ComputeFundSetting(models.Model):
         data_group['dates'] = pd.to_datetime(data_group['dates'])
 
         calendar = data_group['dates'].dt
-        time_frequency_list = [getattr(calendar, 'year')]
         for times in times_types:
+            time_frequency_list = [getattr(calendar, 'year')]
             # 时间频率
-            if times == 'month' and times != 'week':
+            if times in ['month', 'day']:
                 time_frequency_list.append(getattr(calendar, 'month'))
-            elif times == 'week':
+            if times in ['week', 'day']:
                 china_calendar = getattr(calendar, 'isocalendar')()
                 time_frequency_list.append(getattr(china_calendar, 'week'))
-            elif times == 'day':
+            if times == 'day':
                 time_frequency_list.append(getattr(calendar, 'day'))
 
             time_datas = data_group.groupby(time_frequency_list).max()
             time_datas.apply(self.rm_formula, **{'times': times}, axis=1)
-
 
 
 class RmSetting(models.Model):
