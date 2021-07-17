@@ -21,6 +21,19 @@ def fn_timer(function):
     return function_timer
 
 
+def get_time_frequency_list(calendar, time_types):
+    # 创建不同频率的数据(年月周日)
+    time_frequency_list = [getattr(calendar, 'year')]
+    if time_types in ['month', 'day']:
+        time_frequency_list.append(getattr(calendar, 'month'))
+    if time_types in ['week', 'day']:
+        china_calendar = getattr(calendar, 'isocalendar')()
+        time_frequency_list.append(getattr(china_calendar, 'week'))
+    if time_types == 'day':
+        time_frequency_list.append(getattr(calendar, 'day'))
+    return time_frequency_list
+
+
 class Tools(object):
     def isLeapYear(self, years):
         '''

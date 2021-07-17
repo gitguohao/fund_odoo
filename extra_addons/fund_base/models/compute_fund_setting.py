@@ -7,10 +7,12 @@ from extra_addons.tools import regular
 from dateutil.relativedelta import relativedelta
 from odoo.exceptions import UserError
 from decimal import *
+from extra_addons.fund_base.models.logic import Logic
 
 n = 4
 # 计算器保留位I
 ipone_counter = 8
+
 
 
 class ComputeFundSetting(models.Model):
@@ -50,6 +52,24 @@ class ComputeFundSetting(models.Model):
     _sql_constraints = [
         ('unique_code', 'unique (code)', '编码必须唯一!')
     ]
+
+    # 刷新指标
+    def refresh_indicators(self):
+        times = self.time_types
+        # 指标原始数据
+        df = Logic().get_dataframe(self._cr, self.id)
+        times_group_df = df.groupby(['fund_base_data_id'])
+        rp_series = times_group_df.apply(Logic().get_rp, **{'time_types': times})
+        for rp_dict in rp_series:
+            fund_base_data_id = rp_dict['fund_base_data_id']
+            filter_fund_base_data_vals = {
+                'rp_day': rp_dict['day'].get('rp', None),
+                'rp_week': rp_dict['week'].get('rp', None),
+                'rp_month': rp_dict['month'].get('rp', None),
+                'rp_year': rp_dict['year'].get('rp', None),
+            }
+            self.env['filter.fund.base.data'].browse(int(fund_base_data_id)).write(filter_fund_base_data_vals)
+        return True
 
     def rm_rate(self, x, rm_name):
         if pd.isnull(x['close_quoation']) or pd.isnull(x['up_close_quoation']):
@@ -200,6 +220,7 @@ class ComputeFundSetting(models.Model):
     @api.multi
     def filter(self):
         self._cr.execute('delete from filter_fund_base_data where compute_fund_setting_id={compute_fund_setting_id}'.format(compute_fund_setting_id=self.id))
+        self._cr.execute('DELETE from filter_fund_base_day_net where fund_base_data_id is null')
 
         fund_ids = self.env['fund.base.data'].search([])
         for fund in fund_ids:
@@ -211,24 +232,26 @@ class ComputeFundSetting(models.Model):
             if not filter_bool:
                 continue
             calendar = df['dates'].dt
-            # 时间维度
-            time_types = self.time_types
-            # 创建不同频率的数据(年月周日)
-            time_frequency_list = [getattr(calendar, 'year')]
-            if time_types in ['month', 'day']:
-                time_frequency_list.append(getattr(calendar, 'month'))
-            if time_types in ['week', 'day']:
-                china_calendar = getattr(calendar, 'isocalendar')()
-                time_frequency_list.append(getattr(china_calendar, 'week'))
-            if time_types == 'day':
-                time_frequency_list.append(getattr(calendar, 'day'))
-            df_groups = df.groupby(time_frequency_list).sum()
             filter_fund_base_data_d = self.env['filter.fund.base.data'].create({
                 'fund_base_data_id': fund.id,
                 'compute_fund_setting_id': self.id,
             })
-            filter_fund_id= filter_fund_base_data_d.id
-            df_groups.apply(self.filter_create, **{'time_types': time_types, 'filter_fund_id': filter_fund_id}, axis=1)
+            # 时间维度
+            # time_types = self.time_types
+            for times in ['day', 'week','month']:
+                # 创建不同频率的数据(年月周日)
+                time_frequency_list = [getattr(calendar, 'year')]
+                if times in ['month', 'day']:
+                    time_frequency_list.append(getattr(calendar, 'month'))
+                if times in ['week', 'day']:
+                    china_calendar = getattr(calendar, 'isocalendar')()
+                    time_frequency_list.append(getattr(china_calendar, 'week'))
+                if times == 'day':
+                    time_frequency_list.append(getattr(calendar, 'day'))
+                df_groups = df.groupby(time_frequency_list).sum()
+
+                filter_fund_id= filter_fund_base_data_d.id
+                df_groups.apply(self.filter_create, **{'time_types': times, 'filter_fund_id': filter_fund_id}, axis=1)
         return True
 
     def rf_formula(self, x, size, times):
@@ -505,6 +528,10 @@ class FilterFundBaseData(models.Model):
     total_std = fields.Float(string='总览-标准差', digits=(16, 4))
     year_std = fields.Float(string='近一年-标准差', digits=(16, 4))
     market_std = fields.Float(string='熊市-标准差', digits=(16, 4))
+    rp_day = fields.Float(string='RP几何平均日化收益', digits=(16, 4))
+    rp_week = fields.Float(string='RP几何平均周化收益', digits=(16, 4))
+    rp_month = fields.Float(string='RP几何平均月化收益', digits=(16, 4))
+    rp_year = fields.Float(string='RP几何平均年化收益', digits=(16, 4))
 
 
 class FilterFundBaseDayNet(models.Model):

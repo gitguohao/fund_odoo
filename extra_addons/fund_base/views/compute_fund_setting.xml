@@ -166,7 +166,9 @@
                                 <field name="market_config_ids"/>
                             </page>
                         </notebook>
-                        <button string="计算" name="filter" type="object" class="btn-primary"/>
+                        <button string="计算筛选后数据" name="filter" type="object" class="btn-primary"/>
+                        <button string="计算指标" name="refresh_indicators" type="object" class="btn-primary"/>
+
                     </sheet>
 
                     <sheet string="筛选后的数据">
@@ -185,6 +187,10 @@
                                                     <field name="fund_base_data_id" />
                                                     <field name="code" />
                                                     <H1>详细指标数据</H1>
+                                                    <field name="rp_day" />
+                                                    <field name="rp_week" />
+                                                    <field name="rp_month" />
+                                                    <field name="rp_year" />
                                                     <field name="total_std" />
                                                     <field name="year_std" />
                                                     <field name="market_std" />
