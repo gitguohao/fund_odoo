@@ -2,7 +2,6 @@
 from extra_addons.postgres_connect_test import selectOperate
 from extra_addons.tools import get_time_frequency_list
 import pandas as pd
-from decimal import *
 
 
 class Logic(object):
