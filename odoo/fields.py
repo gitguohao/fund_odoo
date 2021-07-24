@@ -1335,21 +1335,21 @@ class Float(Field):
     _description_digits = property(attrgetter('digits'))
 
     def convert_to_column(self, value, record, values=None, validate=True):
-        result = value
-        if isinstance(result, float):
-            digits = self.digits
-            if digits:
-                precision, scale = digits
-                result = float_repr(float_round(result, precision_digits=scale), precision_digits=scale)
+        result = float(value or 0.0)
+        digits = self.digits
+        if digits:
+            precision, scale = digits
+            result = float_repr(float_round(result, precision_digits=scale), precision_digits=scale)
         return result
 
     def convert_to_cache(self, value, record, validate=True):
         # apply rounding here, otherwise value in cache may be wrong!
-        value = float(value or 0.0)
-        if not validate:
-            return value
         digits = self.digits
-        return float_round(value, precision_digits=digits[1]) if digits else value
+        if isinstance(value, float):
+            result = float_round(value, precision_digits=digits[1]) if digits else value
+        else:
+            result = value
+        return result
 
     def convert_to_export(self, value, record):
         if value or value == 0.0:
